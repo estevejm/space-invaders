@@ -2,6 +2,12 @@
 
 Intel 8080 Space Invaders arcade emulator written in C
 
+## Usage
+```sh
+cmake --build . 
+./bin/spaceinvaders
+```
+
 ## Resources
 Extracted from `/r/EmuDev/` discord
 
