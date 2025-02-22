@@ -22,7 +22,7 @@ Extracted from `/r/EmuDev/` discord
 * [Space Invaders disassembly and info](https://computerarcheology.com/Arcade/SpaceInvaders)
 * [CPU tests](https://altairclone.com/downloads/cpu_tests/) (needs a CP/M implementation or to fake it to some extent, see CP/M section)
 
-## CP/M
+### CP/M
 * [General CP/M info](https://en.m.wikipedia.org/wiki/CP/M)
 * [Zero page breakdown](https://en.m.wikipedia.org/wiki/Zero_page_(CP/M))
 * [CP/M BDOS system calls](https://www.seasip.info/Cpm/bdos.html)
