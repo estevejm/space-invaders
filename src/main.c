@@ -5,5 +5,5 @@ int main(void) {
     printf("Space Invaders!\n");
 
     SpaceInvaders *si = new();
-    print(si);
+    run(si);
 }

@@ -4,6 +4,6 @@
 typedef struct spaceInvaders SpaceInvaders;
 
 SpaceInvaders *new();
-void print(SpaceInvaders *si);
+void run(SpaceInvaders *si);
 
 #endif //SPACE_INVADERS_H
