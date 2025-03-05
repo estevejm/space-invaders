@@ -51,7 +51,7 @@ void peek_next_bytes(SpaceInvaders *si) {
   uint8_t first = read_byte_memory(&si->memory, si->cpu.pc);
   uint8_t second = read_byte_memory(&si->memory, si->cpu.pc+1);
   uint8_t third = read_byte_memory(&si->memory, si->cpu.pc+2);
-  printf("next: %02x %02x %02x\n", first, second, third);
+  printf("%04x  %02x %02x %02x\n", si->cpu.pc, first, second, third);
 }
 
 uint8_t fetch_byte(SpaceInvaders *si) {
@@ -66,14 +66,56 @@ uint16_t fetch_word(SpaceInvaders *si) {
   return word;
 }
 
+// TODO: accurate cycle duration per instruction
 void cycle(SpaceInvaders *si) {
   peek_next_bytes(si);
   uint8_t opcode = fetch_byte(si);
-  printf("execute: ");
   switch (opcode) {
     case 0x00:
+    case 0x08:
+    case 0x10:
+    case 0x18:
+    case 0x20:
+    case 0x28:
+    case 0x30:
+    case 0x38:
       printf("NOP");
       break;
+    case 0x0a: {
+      printf("LDAX B");
+      uint16_t address = get_register_pair(&si->cpu, B_PAIR);
+      uint8_t data = read_byte_memory(&si->memory, address);
+      set_register(&si->cpu, A, data);
+      break;
+    }
+    case 0x0b: {
+      printf("DCX B");
+      decrement_register_pair(&si->cpu, B_PAIR);
+      break;
+    }
+    case 0x0d: {
+      printf("DCR C");
+      decrement_register(&si->cpu, C);
+      // TODO: set flags
+      break;
+    }
+    case 0x27: {
+      printf("DAA");
+      bool auxiliar_carry = is_auxiliary_carry_8080(&si->cpu);
+      bool normal_carry = is_carry_8080(&si->cpu);
+      uint8_t acc = get_register(&si->cpu, A);
+      uint8_t lsb = acc & 0xf;
+      if (lsb > 9 || auxiliar_carry) {
+        acc += 6;
+      }
+      uint8_t msb = acc >> 8 & 0xf;
+      if (msb > 9 || normal_carry) {
+        acc += 6;
+      }
+      set_register(&si->cpu, A, acc);
+      // TODO: set flags
+      break;
+    }
     case 0x3c: {
       printf("INR A");
       increment_register(&si->cpu, A);
@@ -86,21 +128,64 @@ void cycle(SpaceInvaders *si) {
       set_register(&si->cpu, A, data);
       break;
     }
-    case 0x4e:
+    case 0x45: {
+      printf("MOV B,L");
+      copy_register(&si->cpu, B, L);
+      break;
+    }
+    case 0x46: {
+      printf("MOV B,M");
+      uint16_t address = get_register_pair(&si->cpu, H_PAIR);
+      uint8_t data = read_byte_memory(&si->memory, address);
+      set_register(&si->cpu, B, data);
+      break;
+    }
+    case 0x47: {
+      printf("MOV B,A");
+      copy_register(&si->cpu, B, A);
+      break;
+    }
+    case 0x48: {
+      printf("MOV C,B");
+      copy_register(&si->cpu, C, B);
+      break;
+    }
+    case 0x49: {
+      printf("MOV C,C");
+      break;
+    }
+    case 0x4e: {
       printf("MOV C,M");
-      uint16_t address = get_m(&si->cpu);
+      uint16_t address = get_register_pair(&si->cpu, H_PAIR);
       uint8_t data = read_byte_memory(&si->memory, address);
       set_register(&si->cpu, C, data);
       break;
-    case 0x4f:
+    }
+    case 0x4f: {
       printf("MOV C,A");
       copy_register(&si->cpu, C, A);
       break;
-    case 0x57:
+    }
+    case 0x52: {
+      printf("MOV D,D");
+      break;
+    }
+    case 0x53: {
+      printf("MOV D,E");
+      copy_register(&si->cpu, D, E);
+      break;
+    }
+    case 0x54: {
+      printf("MOV D,H");
+      copy_register(&si->cpu, D, H);
+      break;
+    }
+    case 0x57: {
       printf("MOV D,A");
       copy_register(&si->cpu, D, A);
       break;
-	case 0xc3: {
+    }
+    case 0xc3: {
       uint16_t addr = fetch_word(si);
       printf("JMP %04x", addr);
       si->cpu.pc = addr;
@@ -115,16 +200,22 @@ void cycle(SpaceInvaders *si) {
       }
       break;
     }
+    case 0xcd: {
+      uint16_t addr = fetch_word(si);
+      printf("CALL %04x", addr);
+      // TODO: push current PC to stack to be used in return
+      si->cpu.pc = addr;
+      break;
+    }
     case 0xea: {
       uint16_t addr = fetch_word(si);
       printf("JPE %04x", addr);
       if (is_parity_even_8080(&si->cpu)) {
-        // TODO: push current PC to stack to be used in return
         si->cpu.pc = addr;
       }
       break;
     }
-	case 0xf4: {
+    case 0xf4: {
       uint16_t addr = fetch_word(si);
       printf("CP %04x", addr);
       if (is_plus_8080(&si->cpu)) {
@@ -151,6 +242,6 @@ void run(SpaceInvaders *si) {
     printf("~~~~~~~~~~~~~~~~\n");
     cycle(si);
     // TODO: implement clock
-    sleep(1);
+    usleep(0.2 * 1000000);
   }
 }

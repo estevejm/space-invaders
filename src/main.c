@@ -2,8 +2,8 @@
 #include "space_invaders.h"
 
 int main(void) {
-    printf("Space Invaders!\n");
+  printf("Space Invaders!\n");
 
-    SpaceInvaders *si = new();
-    run(si);
+  SpaceInvaders *si = new();
+  run(si);
 }
