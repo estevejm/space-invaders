@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 #include "string.h"
@@ -41,6 +42,19 @@ void program_test_rom(SpaceInvaders *si) {
   load_rom(si, 0, "roms/CPUTEST.COM");
 }
 
+void program_hardcoded(SpaceInvaders *si) {
+  uint8_t program[] = {
+      0x06, 0x00, // MVI B,d8
+      0x0e, 0x01, // MVI C,d8
+      0x26, 0xff, // MVI H,d8
+      0x2e, 0xff, // MVI L,d8
+      0x09,       // DAD B
+      0x76        // HLT
+  };
+  size_t size = sizeof(program)/sizeof(program[0]);
+  write_memory(&si->memory, program, 0, size);
+}
+
 SpaceInvaders *new() {
   SpaceInvaders *si = malloc(sizeof(SpaceInvaders));
 
@@ -81,6 +95,17 @@ void cycle(SpaceInvaders *si) {
     case 0x38:
       printf("NOP");
       break;
+    case 0x06: {
+      uint8_t data = fetch_byte(si);
+      printf("MVI B,%02x", data);
+      set_register(&si->cpu, B, data);
+      break;
+    }
+    case 0x09: {
+      printf("DAD B");
+      double_add(&si->cpu, B_PAIR);
+      break;
+    }
     case 0x0a: {
       printf("LDAX B");
       uint16_t address = get_register_pair(&si->cpu, B_PAIR);
@@ -96,30 +121,46 @@ void cycle(SpaceInvaders *si) {
     case 0x0d: {
       printf("DCR C");
       decrement_register(&si->cpu, C);
-      // TODO: set flags
+      break;
+    }
+    case 0x0e: {
+      uint8_t data = fetch_byte(si);
+      printf("MVI C,%02x", data);
+      set_register(&si->cpu, C, data);
+      break;
+    }
+    case 0x16: {
+      uint8_t data = fetch_byte(si);
+      printf("MVI D,%02x", data);
+      set_register(&si->cpu, D, data);
+      break;
+    }
+    case 0x1e: {
+      uint8_t data = fetch_byte(si);
+      printf("MVI E,%02x", data);
+      set_register(&si->cpu, E, data);
+      break;
+    }
+    case 0x26: {
+      uint8_t data = fetch_byte(si);
+      printf("MVI H,%02x", data);
+      set_register(&si->cpu, H, data);
+      break;
+    }
+    case 0x2e: {
+      uint8_t data = fetch_byte(si);
+      printf("MVI L,%02x", data);
+      set_register(&si->cpu, L, data);
       break;
     }
     case 0x27: {
       printf("DAA");
-      bool auxiliar_carry = is_auxiliary_carry_8080(&si->cpu);
-      bool normal_carry = is_carry_8080(&si->cpu);
-      uint8_t acc = get_register(&si->cpu, A);
-      uint8_t lsb = acc & 0xf;
-      if (lsb > 9 || auxiliar_carry) {
-        acc += 6;
-      }
-      uint8_t msb = acc >> 8 & 0xf;
-      if (msb > 9 || normal_carry) {
-        acc += 6;
-      }
-      set_register(&si->cpu, A, acc);
-      // TODO: set flags
+      decimal_adjust_accumulator(&si->cpu);
       break;
     }
     case 0x3c: {
       printf("INR A");
       increment_register(&si->cpu, A);
-      // TODO: set flags
       break;
     }
     case 0x3e: {
@@ -185,16 +226,35 @@ void cycle(SpaceInvaders *si) {
       copy_register(&si->cpu, D, A);
       break;
     }
+    case 0x76: {
+      printf("HLT");
+      halt(&si->cpu);
+      break;
+    }
+    case 0xc2: {
+      uint16_t addr = fetch_word(si);
+      printf("JNZ %04x", addr);
+      if (!get_zero_flag(&si->cpu)) {
+        si->cpu.pc = addr;
+      }
+      break;
+    }
     case 0xc3: {
       uint16_t addr = fetch_word(si);
       printf("JMP %04x", addr);
       si->cpu.pc = addr;
       break;
     }
+    case 0xc7: {
+      uint8_t exp = 0;
+      printf("RST %d", exp);
+      restart(&si->cpu, exp);
+      break;
+    }
     case 0xcc: {
       uint16_t addr = fetch_word(si);
       printf("CZ %04x", addr);
-      if (is_zero_8080(&si->cpu)) {
+      if (get_zero_flag(&si->cpu)) {
         // TODO: push current PC to stack to be used in return
         si->cpu.pc = addr;
       }
@@ -210,7 +270,7 @@ void cycle(SpaceInvaders *si) {
     case 0xea: {
       uint16_t addr = fetch_word(si);
       printf("JPE %04x", addr);
-      if (is_parity_even_8080(&si->cpu)) {
+      if (get_parity_flag(&si->cpu)) {
         si->cpu.pc = addr;
       }
       break;
@@ -218,10 +278,16 @@ void cycle(SpaceInvaders *si) {
     case 0xf4: {
       uint16_t addr = fetch_word(si);
       printf("CP %04x", addr);
-      if (is_plus_8080(&si->cpu)) {
+      if (!get_sign_flag(&si->cpu)) {
         // TODO: push current PC to stack to be used in return
-      	si->cpu.pc = addr;
+        si->cpu.pc = addr;
       }
+      break;
+    }
+    case 0xfe: {
+      uint8_t data = fetch_byte(si);
+      printf("CPI %02x", data);
+      compare_immediate_accumulator(&si->cpu, data);
       break;
     }
     default:
@@ -234,14 +300,15 @@ void cycle(SpaceInvaders *si) {
 void run(SpaceInvaders *si) {
   // TODO: specify rom to load from program arg
 //  program_rom(si);
-  program_test_rom(si);
-  dump_memory(&si->memory);
-  while (1) {
-    printf("----------------\n");
+//  program_test_rom(si);
+  program_hardcoded(si);
+//  dump_memory(&si->memory);
+  while (!is_stopped(&si->cpu)) {
+    printf("--------------\n");
     print_state_8080(&si->cpu);
-    printf("~~~~~~~~~~~~~~~~\n");
+    printf("~~~~~~~~~~~~~~\n");
     cycle(si);
     // TODO: implement clock
-    usleep(0.2 * 1000000);
+    usleep(1 * 1000000);
   }
 }
