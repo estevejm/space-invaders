@@ -100,6 +100,7 @@ void set_register(I8080 *cpu, enum Register r, uint8_t value) {
 }
 
 void copy_register(I8080 *cpu, enum Register dst, enum Register src) {
+  printf("MOV %c,%c", register_names[dst], register_names[src]);
   cpu->registers[dst] = cpu->registers[src];
 }
 
@@ -120,6 +121,8 @@ bool double_carry_occurs(uint32_t a, uint32_t b, uint32_t result) {
 }
 
 void increment_register(I8080 *cpu, enum Register r) {
+  printf("INR %c", register_names[r]);
+
   uint8_t a = cpu->registers[r];
   uint8_t b = 1;
   uint8_t result = a + b;
@@ -133,9 +136,11 @@ void increment_register(I8080 *cpu, enum Register r) {
 }
 
 void decrement_register(I8080 *cpu, enum Register r) {
+  printf("DCR %c", register_names[r]);
+
   uint8_t a = cpu->registers[r];
   uint8_t b = 1;
-  uint8_t result = a - b;
+  uint8_t result = a - b; // TODO: use addition always? result = a + (-b) so we can have a uniform (aux) carry flag check?
 
   set_sign_flag(cpu, result);
   set_zero_flag(cpu, result);
@@ -146,12 +151,26 @@ void decrement_register(I8080 *cpu, enum Register r) {
 }
 
 uint16_t get_register_pair(I8080 *cpu, enum RegisterPair r) {
+  if (r == SP) {
+    return cpu->sp;
+  }
+
   return cpu->registers[r] << 8 | cpu->registers[r + 1];
 }
 
 void set_register_pair(I8080 *cpu, enum RegisterPair r, uint16_t value) {
+  if (r == SP) {
+    cpu->sp = value;
+    return;
+  }
   cpu->registers[r] = value >> 8;
   cpu->registers[r+1] = value & 0xff;
+}
+
+void increment_register_pair(I8080 *cpu, enum RegisterPair r) {
+  uint16_t value = get_register_pair(cpu, r);
+  value++;
+  set_register_pair(cpu, r, value);
 }
 
 void decrement_register_pair(I8080 *cpu, enum RegisterPair r) {
@@ -160,15 +179,33 @@ void decrement_register_pair(I8080 *cpu, enum RegisterPair r) {
   set_register_pair(cpu, r, value);
 }
 
+void double_add(I8080 *cpu, enum RegisterPair r) {
+  // TODO: optimize H_PAIR use case? (just shift left 1 position)
+  uint32_t bc = get_register_pair(cpu, r);
+  uint32_t hl = get_register_pair(cpu, H_PAIR);
+  uint32_t result = bc + hl;
+  set_register_pair(cpu, H_PAIR, result);
+  set_carry_flag(cpu, double_carry_occurs(bc, hl, result));
+}
+
 void compare_immediate_accumulator(I8080 *cpu, uint8_t value) {
-  // TODO: compare using 2's complement substraction
-  // TODO: set flags: S Z A P C
+  uint8_t a = cpu->registers[A];
+  uint8_t b = -value;
+  uint16_t result = a + b;
+
+  set_sign_flag(cpu, result);
+  set_zero_flag(cpu, result);
+  set_parity_flag(cpu, result);
+  set_auxiliary_carry_flag(cpu, !half_carry_occurs(a, b, result));
+  set_carry_flag(cpu, !carry_occurs(a, b, result));
 }
 
 //   6 = 0b0110
 //   9 = 0b1001 (max BCD value)
 // 9+6 = 0b1111
 void decimal_adjust_accumulator(I8080 *cpu) {
+  printf("DAA");
+
   uint8_t acc = get_register(cpu, A);
 
   uint8_t lsb = acc & 0xf;
@@ -192,27 +229,79 @@ void decimal_adjust_accumulator(I8080 *cpu) {
   set_carry_flag(cpu, carry);
 }
 
-void double_add(I8080 *cpu, enum RegisterPair r) {
-  // TODO: optimize H_PAIR use case? (just shift left 1 position)
-  uint32_t bc = get_register_pair(cpu, r);
-  uint32_t hl = get_register_pair(cpu, H_PAIR);
-  uint32_t result = bc + hl;
-  set_register_pair(cpu, H_PAIR, result);
-  set_carry_flag(cpu, double_carry_occurs(bc, hl, result));
-}
-
 void restart(I8080 *cpu, uint8_t value) {
   uint8_t bounded = value % 8;
   // TODO: push current PC to stack to be used by return
   cpu->pc = bounded << 3;
 }
 
-void halt(I8080 *cpu) {
-  cpu->stopped = true;
+void no_operation(I8080 *cpu) {
+  printf("NOP");
 }
 
-bool is_stopped(I8080 *cpu) {
-  return cpu->stopped;
+void halt(I8080 *cpu) {
+  printf("HLT");
+  cpu->halted = true;
+}
+
+bool is_halted(I8080 *cpu) {
+  return cpu->halted;
+}
+
+void jump(I8080 *cpu, uint16_t address) {
+  cpu->pc = address;
+}
+
+void jump_if_zero(I8080 *cpu, uint16_t address) {
+  if (get_zero_flag(cpu)) {
+    jump(cpu, address);
+  }
+}
+
+void jump_if_not_zero(I8080 *cpu, uint16_t address) {
+  if (!get_zero_flag(cpu)) {
+    jump(cpu, address);
+  }
+}
+
+void jump_if_parity_even(I8080 *cpu, uint16_t address) {
+  if (get_parity_flag(cpu)) {
+    jump(cpu, address);
+  }
+}
+
+void jump_if_no_carry(I8080 *cpu, uint16_t address) {
+  if (!get_carry_flag(cpu)) {
+    jump(cpu, address);
+  }
+}
+
+void subroutine_call(I8080 *cpu, uint16_t address) {
+  // TODO: push current PC to stack to be used in return
+  jump(cpu, address);
+}
+
+void subroutine_call_if_zero(I8080 *cpu, uint16_t address) {
+  if (get_zero_flag(cpu)) {
+    subroutine_call(cpu, address);
+  }
+}
+
+void subroutine_call_if_plus(I8080 *cpu, uint16_t address) {
+  if (!get_sign_flag(cpu)) {
+    subroutine_call(cpu, address);
+  }
+}
+
+void subroutine_return(I8080 *cpu) {
+  // TODO: pop PC from stack
+  cpu->pc = 0;
+}
+
+void subroutine_return_if_plus(I8080 *cpu) {
+  if (!get_sign_flag(cpu)) {
+    subroutine_return(cpu);
+  }
 }
 
 void print_state_8080(I8080 *cpu) {
