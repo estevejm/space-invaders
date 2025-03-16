@@ -869,6 +869,7 @@ void run(SpaceInvaders *si) {
   program_rom(si);
 //  program_test_rom(si);
 //  program_hardcoded(si);
+  printf("··············\n");
   while (!si->halted) {
     print_state_8080(&si->cpu);
     printf("··············\n");
@@ -877,6 +878,6 @@ void run(SpaceInvaders *si) {
     peek_next_bytes(si);
     cycle(si);
     // TODO: implement clock
-//    usleep(1 * 1000000);
+    usleep(1 * 1000000);
   }
 }

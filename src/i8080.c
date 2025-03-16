@@ -262,20 +262,24 @@ void print_state_8080(I8080 *cpu) {
     if (i % 2 == 0) {
        printf(" ");
     } else {
+      printf("  ");
+      if (i == 1) {
+        printf("S Z A P C");
+      } else if (i == 3) {
+        printf(
+          "%d %d %d %d %d",
+          (int)get_sign_flag(cpu),
+          (int)get_zero_flag(cpu),
+          (int)get_auxiliary_carry_flag(cpu),
+          (int)get_parity_flag(cpu),
+          (int)get_carry_flag(cpu)
+        );
+      } else if (i == 5) {
+        printf("SP | %04x", cpu->sp);
+      } else if (i == 7) {
+        printf("PC | %04x", cpu->pc);
+      }
       printf("\n");
     }
   }
-
-  printf("SP | %04x\n", cpu->sp);
-  printf("PC | %04x\n", cpu->pc);
-
-  printf("S Z A P C\n");
-  printf(
-      "%d %d %d %d %d\n",
-      (int)get_sign_flag(cpu),
-      (int)get_zero_flag(cpu),
-      (int)get_auxiliary_carry_flag(cpu),
-      (int)get_parity_flag(cpu),
-      (int)get_carry_flag(cpu)
-  );
 }
