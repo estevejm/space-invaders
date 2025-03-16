@@ -115,9 +115,20 @@ uint8_t fetch_byte(SpaceInvaders *si) {
 }
 
 uint16_t fetch_word(SpaceInvaders *si) {
-  uint16_t word = read_word(si, si->cpu.pc);
+  uint16_t data = read_word(si, si->cpu.pc);
   si->cpu.pc+=2;
-  return word;
+  return data;
+}
+
+void stack_push_word(SpaceInvaders *si, uint16_t data) {
+  si->cpu.sp-=2;
+  write_word(si, si->cpu.sp, data);
+}
+
+uint16_t stack_pop_word(SpaceInvaders *si) {
+  uint16_t data = read_word(si, si->cpu.sp);
+  si->cpu.sp+=2;
+  return data;
 }
 
 // TODO: accurate cycle duration per instruction
@@ -404,8 +415,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xc1: {
       printf("POP B");
-      uint16_t data = read_word(si, si->cpu.sp);
-      si->cpu.sp+=2;
+      uint16_t data = stack_pop_word(si);
       set_register_pair(&si->cpu, B_PAIR, data);
       break;
     }
@@ -424,8 +434,7 @@ void cycle(SpaceInvaders *si) {
     case 0xc5: {
       printf("PUSH B");
       uint16_t data = get_register_pair(&si->cpu, B_PAIR);
-      si->cpu.sp-=2;
-      write_word(si, si->cpu.sp, data);
+      stack_push_word(si, data);
       break;
     }
     case 0xc7: {
@@ -454,8 +463,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xd1: {
       printf("POP D");
-      uint16_t data = read_word(si, si->cpu.sp);
-      si->cpu.sp+=2;
+      uint16_t data = stack_pop_word(si);
       set_register_pair(&si->cpu, D_PAIR, data);
       break;
     }
@@ -468,22 +476,19 @@ void cycle(SpaceInvaders *si) {
     case 0xd5: {
       printf("PUSH D");
       uint16_t data = get_register_pair(&si->cpu, D_PAIR);
-      si->cpu.sp-=2;
-      write_word(si, si->cpu.sp, data);
+      stack_push_word(si, data);
       break;
     }
     case 0xe1: {
       printf("POP H");
-      uint16_t data = read_word(si, si->cpu.sp);
-      si->cpu.sp+=2;
+      uint16_t data = stack_pop_word(si);
       set_register_pair(&si->cpu, H_PAIR, data);
       break;
     }
     case 0xe5: {
       printf("PUSH H");
       uint16_t data = get_register_pair(&si->cpu, H_PAIR);
-      si->cpu.sp-=2;
-      write_word(si, si->cpu.sp, data);
+      stack_push_word(si, data);
       break;
     }
     case 0xea: {
@@ -494,8 +499,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xf1: {
       printf("POP PSW");
-      uint16_t data = read_word(si, si->cpu.sp);
-      si->cpu.sp+=2;
+      uint16_t data = stack_pop_word(si);
       set_register_pair(&si->cpu, PSW, data);
       break;
     }
@@ -506,10 +510,9 @@ void cycle(SpaceInvaders *si) {
       break;
     }
     case 0xf5: {
-      printf("PUSH H");
+      printf("PUSH PSW");
       uint16_t data = get_register_pair(&si->cpu, PSW);
-      si->cpu.sp-=2;
-      write_word(si, si->cpu.sp, data);
+      stack_push_word(si, data);
       break;
     }
     case 0xfe: {
@@ -531,10 +534,10 @@ void print_bus(SpaceInvaders *si) {
 }
 
 void print_stack(SpaceInvaders *si) {
-  // TODO: print from SP and print always entire lines
-  int to = VRAM_ADDRESS; // last section of ram
-  int from = to - 0x10;
-  memory_peek(&si->memory, from, to);
+  // TODO: print from SP and print always entire "lines" (16 bytes)
+  int size = 0x10;
+  int address = VRAM_ADDRESS - size; // last section of RAM
+  memory_peek(&si->memory, address, size);
 }
 
 void run(SpaceInvaders *si) {
