@@ -97,6 +97,19 @@ void print_stack(SpaceInvaders *si) {
     stackPointerMemoryLineStart -= 0x10;
     stackPointerMemoryLineStart = stackPointerMemoryLineStart & 0xffff;
   }
+  int sp = si->cpu.sp & 0xf;
+  if (sp == 0) {
+    sp = 0x10;
+  }
+  sp *= 3;
+  if (sp > 8) {
+    sp++;
+  }
+  sp += 6;
+  for (int i = 0; i < sp; i++) {
+    printf(" ");
+  }
+  printf("vv\n");
   memory_peek(&si->memory, stackPointerMemoryLineStart, 0x10);
 }
 
