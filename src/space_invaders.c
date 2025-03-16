@@ -97,20 +97,7 @@ void print_stack(SpaceInvaders *si) {
     stackPointerMemoryLineStart -= 0x10;
     stackPointerMemoryLineStart = stackPointerMemoryLineStart & 0xffff;
   }
-  int sp = si->cpu.sp & 0xf;
-  if (sp == 0) {
-    sp = 0x10;
-  }
-  sp *= 3;
-  if (sp > 8) {
-    sp++;
-  }
-  sp += 6;
-  for (int i = 0; i < sp; i++) {
-    printf(" ");
-  }
-  printf("vv\n");
-  memory_peek(&si->memory, stackPointerMemoryLineStart, 0x10);
+  memory_peek_highlight(&si->memory, stackPointerMemoryLineStart, 0x10, si->cpu.sp);
 }
 
 uint8_t read_byte(SpaceInvaders *si, uint16_t address) {
@@ -878,6 +865,6 @@ void run(SpaceInvaders *si) {
     peek_next_bytes(si);
     cycle(si);
     // TODO: implement clock
-    usleep(1 * 1000000);
+//    usleep(1 * 1000000);
   }
 }

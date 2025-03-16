@@ -22,6 +22,22 @@ void memory_peek(Memory *memory, int address, int size) {
   }
 }
 
+void memory_peek_highlight(Memory *memory, int address, int size, int highlight) {
+  for (int i = address; i < address + size; i++) {
+    if (i % 16 == 0) {
+      printf("%04x", i);
+    }
+    if (i % 8 == 0) {
+      printf(" ");
+    }
+    printf(i == highlight ? "|" : " ");
+    printf("%02x", memory->bytes[i]);
+    if (i % 16 == 15) {
+      printf("\n");
+    }
+  }
+}
+
 void memory_dump(Memory *memory) {
   memory_peek(memory, 0, MEMORY_BYTES);
 }
