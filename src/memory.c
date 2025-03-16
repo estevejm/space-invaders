@@ -23,6 +23,7 @@ void memory_peek(Memory *memory, int address, int size) {
 }
 
 void memory_peek_highlight(Memory *memory, int address, int size, int highlight) {
+  int to = address + size;
   for (int i = address; i < address + size; i++) {
     if (i % 16 == 0) {
       printf("%04x", i);
@@ -33,6 +34,9 @@ void memory_peek_highlight(Memory *memory, int address, int size, int highlight)
     printf(i == highlight ? "|" : " ");
     printf("%02x", memory->bytes[i]);
     if (i % 16 == 15) {
+      if (i + 1 == highlight) {
+        printf("|");
+      }
       printf("\n");
     }
   }

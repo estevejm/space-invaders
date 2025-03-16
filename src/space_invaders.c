@@ -84,11 +84,11 @@ void print_instruction(SpaceInvaders *si, char *format, ...) {
   va_start(args, format);
   vprintf(format, args);
   va_end(args);
-  printf("\n··············\n");
+  printf("\n····················\n");
 }
 
 void print_bus(SpaceInvaders *si) {
-  printf("* %c %04x %02x\n", si->write ? 'w' : 'r', si->address, si->data);
+  printf("~ %c %04x %02x\n", si->write ? 'w' : 'r', si->address, si->data);
 }
 
 void print_stack(SpaceInvaders *si) {
@@ -856,15 +856,15 @@ void run(SpaceInvaders *si) {
   program_rom(si);
 //  program_test_rom(si);
 //  program_hardcoded(si);
-  printf("··············\n");
+  printf("····················\n");
   while (!si->halted) {
     print_state_8080(&si->cpu);
-    printf("··············\n");
+    printf("····················\n");
     print_stack(si);
-    printf("~~~~~~~~~~~~~~\n");
+    printf("~~~~~~~~~~~~~~~~~~~~\n");
     peek_next_bytes(si);
     cycle(si);
     // TODO: implement clock
-//    usleep(1 * 1000000);
+    usleep(1 * 1000000);
   }
 }
