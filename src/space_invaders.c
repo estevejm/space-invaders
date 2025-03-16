@@ -120,6 +120,16 @@ uint16_t fetch_word(SpaceInvaders *si) {
   return data;
 }
 
+uint8_t register_pair_read_byte(SpaceInvaders *si, enum RegisterPair r) {
+  uint16_t address = get_register_pair(&si->cpu, r);
+  return read_byte(si, address);
+}
+
+void register_pair_write_byte(SpaceInvaders *si, enum RegisterPair r, uint8_t data) {
+  uint16_t address = get_register_pair(&si->cpu, r);
+  write_byte(si, address, data);
+}
+
 void stack_push_word(SpaceInvaders *si, uint16_t data) {
   si->cpu.sp-=2;
   write_word(si, si->cpu.sp, data);
@@ -174,8 +184,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x0a: {
       printf("LDAX B");
-      uint16_t address = get_register_pair(&si->cpu, B_PAIR);
-      uint8_t data = read_byte(si, address);
+      uint8_t data = register_pair_read_byte(si, B_PAIR);
       set_register(&si->cpu, A, data);
       break;
     }
@@ -231,8 +240,7 @@ void cycle(SpaceInvaders *si) {
       break;
     case 0x1a: {
       printf("LDAX D");
-      uint16_t address = get_register_pair(&si->cpu, D_PAIR);
-      uint8_t data = read_byte(si, address);
+      uint8_t data = register_pair_read_byte(si, D_PAIR);
       set_register(&si->cpu, A, data);
       break;
     }
@@ -358,8 +366,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x46: {
       printf("MOV B,M");
-      uint16_t address = get_register_pair(&si->cpu, H_PAIR);
-      uint8_t data = read_byte(si, address);
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
       set_register(&si->cpu, B, data);
       break;
     }
@@ -377,8 +384,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x4e: {
       printf("MOV C,M");
-      uint16_t address = get_register_pair(&si->cpu, H_PAIR);
-      uint8_t data = read_byte(si, address);
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
       set_register(&si->cpu, C, data);
       break;
     }
@@ -408,9 +414,8 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x77: {
       printf("MOV M,A");
-      uint16_t address = get_register_pair(&si->cpu, H_PAIR);
       uint8_t data = get_register(&si->cpu, A);
-      write_byte(si, address, data);
+      register_pair_write_byte(si, H_PAIR, data);
       break;
     }
     case 0xc1: {
