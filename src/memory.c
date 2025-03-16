@@ -15,17 +15,6 @@ uint8_t memory_read_byte(Memory *memory, uint16_t address) {
   return memory->bytes[address];
 }
 
-// little endian
-uint16_t memory_read_word(Memory *memory, uint16_t address) {
-  return memory->bytes[address] | memory->bytes[address + 1] << 8;
-}
-
-// little endian
-void memory_write_word(Memory *memory, uint16_t address, uint16_t data) {
-  memory->bytes[address] = data & 0xff;
-  memory->bytes[address+1] = data >> 8;
-}
-
 void memory_peek(Memory *memory, int from, int to) {
   for (int i = from; i < to; i++) {
     if (i % 16 == 0) {

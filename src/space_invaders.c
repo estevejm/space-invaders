@@ -17,6 +17,10 @@
 struct spaceInvaders {
   I8080 cpu;
   Memory memory;
+  // TODO: extract buses
+  bool write;
+  uint8_t data;
+  uint16_t address;
 };
 
 void load_rom(SpaceInvaders *si, int address, char *filename) {
@@ -73,14 +77,45 @@ void peek_next_bytes(SpaceInvaders *si) {
   printf("%02x %02x %02x\n", first, second, third);
 }
 
+uint8_t read_byte(SpaceInvaders *si, uint16_t address) {
+  si->write = false;
+  si->address = address;
+  si->data = memory_read_byte(&si->memory, si->address);
+  return si->data;
+}
+
+uint16_t read_word(SpaceInvaders *si, uint16_t address) {
+  uint8_t lsb = read_byte(si, address);
+  uint8_t msb = read_byte(si, address+1);
+
+  // little endian
+  return (msb << 8) | lsb;
+}
+
+void write_byte(SpaceInvaders *si, uint16_t address, uint8_t data) {
+  si->write = true;
+  si->address = address;
+  si->data = data;
+  memory_write_byte(&si->memory, si->address, si->data);
+}
+
+void write_word(SpaceInvaders *si, uint16_t address, uint16_t data) {
+  // little endian
+  uint8_t lsb = data & 0xff;
+  uint8_t msb = data >> 8;
+
+  write_byte(si, address, lsb);
+  write_byte(si, address+1, msb);
+}
+
 uint8_t fetch_byte(SpaceInvaders *si) {
-  uint8_t byte = memory_read_byte(&si->memory, si->cpu.pc);
+  uint8_t data = read_byte(si, si->cpu.pc);
   si->cpu.pc++;
-  return byte;
+  return data;
 }
 
 uint16_t fetch_word(SpaceInvaders *si) {
-  uint16_t word = memory_read_word(&si->memory, si->cpu.pc);
+  uint16_t word = read_word(si, si->cpu.pc);
   si->cpu.pc+=2;
   return word;
 }
@@ -129,7 +164,7 @@ void cycle(SpaceInvaders *si) {
     case 0x0a: {
       printf("LDAX B");
       uint16_t address = get_register_pair(&si->cpu, B_PAIR);
-      uint8_t data = memory_read_byte(&si->memory, address);
+      uint8_t data = read_byte(si, address);
       set_register(&si->cpu, A, data);
       break;
     }
@@ -186,7 +221,7 @@ void cycle(SpaceInvaders *si) {
     case 0x1a: {
       printf("LDAX D");
       uint16_t address = get_register_pair(&si->cpu, D_PAIR);
-      uint8_t data = memory_read_byte(&si->memory, address);
+      uint8_t data = read_byte(si, address);
       set_register(&si->cpu, A, data);
       break;
     }
@@ -283,7 +318,7 @@ void cycle(SpaceInvaders *si) {
     case 0x3a: {
       uint16_t address = fetch_word(si);
       printf("LDA %04x", address);
-      uint8_t data = memory_read_byte(&si->memory, address);
+      uint8_t data = read_byte(si, address);
       set_register(&si->cpu, A, data);
       break;
     }
@@ -313,7 +348,7 @@ void cycle(SpaceInvaders *si) {
     case 0x46: {
       printf("MOV B,M");
       uint16_t address = get_register_pair(&si->cpu, H_PAIR);
-      uint8_t data = memory_read_byte(&si->memory, address);
+      uint8_t data = read_byte(si, address);
       set_register(&si->cpu, B, data);
       break;
     }
@@ -332,7 +367,7 @@ void cycle(SpaceInvaders *si) {
     case 0x4e: {
       printf("MOV C,M");
       uint16_t address = get_register_pair(&si->cpu, H_PAIR);
-      uint8_t data = memory_read_byte(&si->memory, address);
+      uint8_t data = read_byte(si, address);
       set_register(&si->cpu, C, data);
       break;
     }
@@ -364,12 +399,12 @@ void cycle(SpaceInvaders *si) {
       printf("MOV M,A");
       uint16_t address = get_register_pair(&si->cpu, H_PAIR);
       uint8_t data = get_register(&si->cpu, A);
-      memory_write_byte(&si->memory, address, data);
+      write_byte(si, address, data);
       break;
     }
     case 0xc1: {
       printf("POP B");
-      uint16_t data = memory_read_word(&si->memory, si->cpu.sp);
+      uint16_t data = read_word(si, si->cpu.sp);
       si->cpu.sp+=2;
       set_register_pair(&si->cpu, B_PAIR, data);
       break;
@@ -390,7 +425,7 @@ void cycle(SpaceInvaders *si) {
       printf("PUSH B");
       uint16_t data = get_register_pair(&si->cpu, B_PAIR);
       si->cpu.sp-=2;
-      memory_write_word(&si->memory, si->cpu.sp, data);
+      write_word(si, si->cpu.sp, data);
       break;
     }
     case 0xc7: {
@@ -419,7 +454,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xd1: {
       printf("POP D");
-      uint16_t data = memory_read_word(&si->memory, si->cpu.sp);
+      uint16_t data = read_word(si, si->cpu.sp);
       si->cpu.sp+=2;
       set_register_pair(&si->cpu, D_PAIR, data);
       break;
@@ -434,12 +469,12 @@ void cycle(SpaceInvaders *si) {
       printf("PUSH D");
       uint16_t data = get_register_pair(&si->cpu, D_PAIR);
       si->cpu.sp-=2;
-      memory_write_word(&si->memory, si->cpu.sp, data);
+      write_word(si, si->cpu.sp, data);
       break;
     }
     case 0xe1: {
       printf("POP H");
-      uint16_t data = memory_read_word(&si->memory, si->cpu.sp);
+      uint16_t data = read_word(si, si->cpu.sp);
       si->cpu.sp+=2;
       set_register_pair(&si->cpu, H_PAIR, data);
       break;
@@ -448,7 +483,7 @@ void cycle(SpaceInvaders *si) {
       printf("PUSH H");
       uint16_t data = get_register_pair(&si->cpu, H_PAIR);
       si->cpu.sp-=2;
-      memory_write_word(&si->memory, si->cpu.sp, data);
+      write_word(si, si->cpu.sp, data);
       break;
     }
     case 0xea: {
@@ -459,7 +494,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xf1: {
       printf("POP PSW");
-      uint16_t data = memory_read_word(&si->memory, si->cpu.sp);
+      uint16_t data = read_word(si, si->cpu.sp);
       si->cpu.sp+=2;
       set_register_pair(&si->cpu, PSW, data);
       break;
@@ -474,7 +509,7 @@ void cycle(SpaceInvaders *si) {
       printf("PUSH H");
       uint16_t data = get_register_pair(&si->cpu, PSW);
       si->cpu.sp-=2;
-      memory_write_word(&si->memory, si->cpu.sp, data);
+      write_word(si, si->cpu.sp, data);
       break;
     }
     case 0xfe: {
@@ -488,6 +523,11 @@ void cycle(SpaceInvaders *si) {
       exit(1);
   }
   printf("\n");
+}
+
+void print_bus(SpaceInvaders *si) {
+  printf(si->write ? "w" : "r");
+  printf(" %04x %02x\n", si->address, si->data);
 }
 
 void print_stack(SpaceInvaders *si) {
@@ -506,9 +546,8 @@ void run(SpaceInvaders *si) {
     printf("--------------\n");
     print_state_8080(&si->cpu);
     printf("``````````````\n");
+    print_bus(si);
 //    print_stack(si);
-    // TODO: print addr and data buses
-    // TODO: print section of memory affected by last instruction? or enough with bus?
     printf("~~~~~~~~~~~~~~\n");
     cycle(si);
     // TODO: implement clock
