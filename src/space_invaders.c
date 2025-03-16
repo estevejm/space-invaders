@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include "string.h"
 #include "space_invaders.h"
@@ -21,6 +22,7 @@ struct spaceInvaders {
   bool write;
   uint8_t data;
   uint16_t address;
+  bool halted;
 };
 
 void load_rom(SpaceInvaders *si, int address, char *filename) {
@@ -77,10 +79,32 @@ void peek_next_bytes(SpaceInvaders *si) {
   printf("%02x %02x %02x\n", first, second, third);
 }
 
+void print_instruction(SpaceInvaders *si, char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  vprintf(format, args);
+  va_end(args);
+  printf("\n··············\n");
+}
+
+void print_bus(SpaceInvaders *si) {
+  printf("* %c %04x %02x\n", si->write ? 'w' : 'r', si->address, si->data);
+}
+
+void print_stack(SpaceInvaders *si) {
+  int stackPointerMemoryLineStart = si->cpu.sp & 0xfff0;
+  if (si->cpu.sp % 0x10 == 0) {
+    stackPointerMemoryLineStart -= 0x10;
+    stackPointerMemoryLineStart = stackPointerMemoryLineStart & 0xffff;
+  }
+  memory_peek(&si->memory, stackPointerMemoryLineStart, 0x10);
+}
+
 uint8_t read_byte(SpaceInvaders *si, uint16_t address) {
   si->write = false;
   si->address = address;
   si->data = memory_read_byte(&si->memory, si->address);
+  print_bus(si);
   return si->data;
 }
 
@@ -97,15 +121,16 @@ void write_byte(SpaceInvaders *si, uint16_t address, uint8_t data) {
   si->address = address;
   si->data = data;
   memory_write_byte(&si->memory, si->address, si->data);
+  print_bus(si);
 }
 
 void write_word(SpaceInvaders *si, uint16_t address, uint16_t data) {
   // little endian
-  uint8_t lsb = data & 0xff;
   uint8_t msb = data >> 8;
+  uint8_t lsb = data & 0xff;
 
-  write_byte(si, address, lsb);
   write_byte(si, address+1, msb);
+  write_byte(si, address, lsb);
 }
 
 uint8_t fetch_byte(SpaceInvaders *si) {
@@ -141,408 +166,425 @@ uint16_t stack_pop_word(SpaceInvaders *si) {
   return data;
 }
 
+void subroutine_call(SpaceInvaders *si, uint16_t address) {
+  stack_push_word(si, si->cpu.pc);
+  jump(&si->cpu, address);
+}
+
+void subroutine_call_if_zero(SpaceInvaders *si, uint16_t address) {
+  if (get_zero_flag(&si->cpu)) {
+    subroutine_call(si, address);
+  }
+}
+
+void subroutine_call_if_plus(SpaceInvaders *si, uint16_t address) {
+  if (!get_sign_flag(&si->cpu)) {
+    subroutine_call(si, address);
+  }
+}
+
+void subroutine_return(SpaceInvaders *si) {
+  si->cpu.pc = stack_pop_word(si);
+}
+
+void subroutine_return_if_plus(SpaceInvaders *si) {
+  if (!get_sign_flag(&si->cpu)) {
+    subroutine_return(si);
+  }
+}
+
+void no_operation(SpaceInvaders *si) {
+  print_instruction(si, "NOP");
+}
+
+void halt(SpaceInvaders *si) {
+  print_instruction(si, "HLT");
+  si->halted = true;
+}
+
+void register_increment(SpaceInvaders *si, enum Register r) {
+  print_instruction(si, "INR %c", register_names[r]);
+  increment_register(&si->cpu, r);
+}
+
+void register_decrement(SpaceInvaders *si, enum Register r) {
+  print_instruction(si, "DCR %c", register_names[r]);
+  decrement_register(&si->cpu, r);
+}
+
+void register_pair_increment(SpaceInvaders *si, enum RegisterPair r) {
+  print_instruction(si, "INX %s", register_pair_names[r]);
+  increment_register_pair(&si->cpu, r);
+}
+
+void register_pair_decrement(SpaceInvaders *si, enum RegisterPair r) {
+  print_instruction(si, "DCX %s", register_pair_names[r]);
+  decrement_register_pair(&si->cpu, r);
+}
+
+void register_move(SpaceInvaders *si, enum Register dst, enum Register src) {
+  print_instruction(si, "MOV %c,%c", register_names[dst], register_names[src]);
+  copy_register(&si->cpu, dst, src);
+}
+
 // TODO: accurate cycle duration per instruction
 void cycle(SpaceInvaders *si) {
-  peek_next_bytes(si);
   uint8_t opcode = fetch_byte(si);
   switch (opcode) {
     case 0x00:
-      no_operation(&si->cpu);
+      no_operation(si);
       break;
     case 0x01: {
       uint16_t data = fetch_word(si);
-      printf("LXI B,%04x", data);
+      print_instruction(si, "LXI B,%04x", data);
       set_register_pair(&si->cpu, B_PAIR, data);
       break;
     }
-    case 0x03: {
-      printf("INX B");
-      increment_register_pair(&si->cpu, B_PAIR);
+    case 0x03:
+      register_pair_increment(si, B_PAIR);
       break;
-    }
-    case 0x04: {
-      increment_register(&si->cpu, B);
+    case 0x04:
+      register_increment(si, B);
       break;
-    }
-    case 0x05: {
-      decrement_register(&si->cpu, B);
+    case 0x05:
+      register_decrement(si, B);
       break;
-    }
     case 0x06: {
       uint8_t data = fetch_byte(si);
-      printf("MVI B,%02x", data);
+      print_instruction(si, "MVI B,%02x", data);
       set_register(&si->cpu, B, data);
       break;
     }
     case 0x08:
-      no_operation(&si->cpu);
+      no_operation(si);
       break;
     case 0x09: {
-      printf("DAD B");
+      print_instruction(si, "DAD B");
       double_add(&si->cpu, B_PAIR);
       break;
     }
     case 0x0a: {
-      printf("LDAX B");
+      print_instruction(si, "LDAX B");
       uint8_t data = register_pair_read_byte(si, B_PAIR);
       set_register(&si->cpu, A, data);
       break;
     }
-    case 0x0b: {
-      printf("DCX B");
-      decrement_register_pair(&si->cpu, B_PAIR);
+    case 0x0b:
+      register_pair_decrement(si, B_PAIR);
       break;
-    }
-    case 0x0c: {
-      increment_register(&si->cpu, C);
+    case 0x0c:
+      register_increment(si, C);
       break;
-    }
-    case 0x0d: {
+    case 0x0d:
       decrement_register(&si->cpu, C);
       break;
-    }
     case 0x0e: {
       uint8_t data = fetch_byte(si);
-      printf("MVI C,%02x", data);
+      print_instruction(si, "MVI C,%02x", data);
       set_register(&si->cpu, C, data);
       break;
     }
     case 0x10:
-      no_operation(&si->cpu);
+      no_operation(si);
       break;
     case 0x11: {
       uint16_t data = fetch_word(si);
-      printf("LXI D,%04x", data);
+      print_instruction(si, "LXI D,%04x", data);
       set_register_pair(&si->cpu, D_PAIR, data);
       break;
     }
-    case 0x13: {
-      printf("INX D");
-      increment_register_pair(&si->cpu, D_PAIR);
+    case 0x13:
+      register_pair_increment(si, D_PAIR);
       break;
-    }
-    case 0x14: {
-      increment_register(&si->cpu, D);
+    case 0x14:
+      register_increment(si, D);
       break;
-    }
-    case 0x15: {
+    case 0x15:
       decrement_register(&si->cpu, D);
       break;
-    }
     case 0x16: {
       uint8_t data = fetch_byte(si);
-      printf("MVI D,%02x", data);
+      print_instruction(si, "MVI D,%02x", data);
       set_register(&si->cpu, D, data);
       break;
     }
     case 0x18:
-      no_operation(&si->cpu);
+      no_operation(si);
       break;
     case 0x1a: {
-      printf("LDAX D");
+      print_instruction(si, "LDAX D");
       uint8_t data = register_pair_read_byte(si, D_PAIR);
       set_register(&si->cpu, A, data);
       break;
     }
-    case 0x1b: {
-      printf("DCX D");
-      decrement_register_pair(&si->cpu, D_PAIR);
+    case 0x1b:
+      register_pair_decrement(si, D_PAIR);
       break;
-    }
-    case 0x1c: {
-      increment_register(&si->cpu, E);
+    case 0x1c:
+      register_increment(si, E);
       break;
-    }
-    case 0x1d: {
+    case 0x1d:
       decrement_register(&si->cpu, E);
       break;
-    }
     case 0x1e: {
       uint8_t data = fetch_byte(si);
-      printf("MVI E,%02x", data);
+      print_instruction(si, "MVI E,%02x", data);
       set_register(&si->cpu, E, data);
       break;
     }
     case 0x20:
-      no_operation(&si->cpu);
+      no_operation(si);
       break;
     case 0x21: {
       uint16_t data = fetch_word(si);
-      printf("LXI H,%04x", data);
+      print_instruction(si, "LXI H,%04x", data);
       set_register_pair(&si->cpu, H_PAIR, data);
       break;
     }
-    case 0x23: {
-      printf("INX H");
-      increment_register_pair(&si->cpu, H_PAIR);
+    case 0x23:
+      register_pair_increment(si, H_PAIR);
       break;
-    }
-    case 0x24: {
-      increment_register(&si->cpu, H);
+    case 0x24:
+      register_increment(si, H);
       break;
-    }
-    case 0x25: {
-      decrement_register(&si->cpu, H);
+    case 0x25:
+      register_decrement(si, H);
       break;
-    }
     case 0x26: {
       uint8_t data = fetch_byte(si);
-      printf("MVI H,%02x", data);
+      print_instruction(si, "MVI H,%02x", data);
       set_register(&si->cpu, H, data);
       break;
     }
     case 0x27: {
+      print_instruction(si, "DAA");
       decimal_adjust_accumulator(&si->cpu);
       break;
     }
     case 0x28:
-      no_operation(&si->cpu);
+      no_operation(si);
       break;
-    case 0x2b: {
-      printf("DCX H");
-      decrement_register_pair(&si->cpu, H_PAIR);
+    case 0x2b:
+      register_pair_decrement(si, H_PAIR);
       break;
-    }
-    case 0x2c: {
+    case 0x2c:
       increment_register(&si->cpu, L);
       break;
-    }
-    case 0x2d: {
-      decrement_register(&si->cpu, L);
+    case 0x2d:
+      register_decrement(si, L);
       break;
-    }
     case 0x2e: {
       uint8_t data = fetch_byte(si);
-      printf("MVI L,%02x", data);
+      print_instruction(si, "MVI L,%02x", data);
       set_register(&si->cpu, L, data);
       break;
     }
     case 0x30:
-      no_operation(&si->cpu);
+      no_operation(si);
       break;
     case 0x31: {
       uint16_t data = fetch_word(si);
-      printf("LXI SP,%04x", data);
+      print_instruction(si, "LXI SP,%04x", data);
       set_register_pair(&si->cpu, SP, data);
       break;
     }
-    case 0x33: {
-      printf("INX SP");
-      increment_register_pair(&si->cpu, SP);
+    case 0x33:
+      register_pair_increment(si, SP);
       break;
-    }
     case 0x38:
-      no_operation(&si->cpu);
+      no_operation(si);
       break;
     case 0x3a: {
       uint16_t address = fetch_word(si);
-      printf("LDA %04x", address);
+      print_instruction(si, "LDA %04x", address);
       uint8_t data = read_byte(si, address);
       set_register(&si->cpu, A, data);
       break;
     }
-    case 0x3b: {
-      printf("DCX SP");
-      decrement_register_pair(&si->cpu, SP);
+    case 0x3b:
+      register_pair_decrement(si, SP);
       break;
-    }
-    case 0x3c: {
-      increment_register(&si->cpu, A);
+    case 0x3c:
+      register_increment(si, A);
       break;
-    }
-    case 0x3d: {
-      decrement_register(&si->cpu, A);
+    case 0x3d:
+      register_decrement(si, A);
       break;
-    }
     case 0x3e: {
       uint8_t data = fetch_byte(si);
-      printf("MVI A,%02x", data);
+      print_instruction(si, "MVI A,%02x", data);
       set_register(&si->cpu, A, data);
       break;
     }
     case 0x45: {
-      copy_register(&si->cpu, B, L);
+      register_move(si, B, L);
       break;
     }
     case 0x46: {
-      printf("MOV B,M");
+      print_instruction(si, "MOV B,M");
       uint8_t data = register_pair_read_byte(si, H_PAIR);
       set_register(&si->cpu, B, data);
       break;
     }
     case 0x47: {
-      copy_register(&si->cpu, B, A);
+      register_move(si, B, A);
       break;
     }
     case 0x48: {
-      copy_register(&si->cpu, C, B);
+      register_move(si, C, B);
       break;
     }
     case 0x49: {
-      copy_register(&si->cpu, C, C);
+      register_move(si, C, C);
       break;
     }
     case 0x4e: {
-      printf("MOV C,M");
+      print_instruction(si, "MOV C,M");
       uint8_t data = register_pair_read_byte(si, H_PAIR);
       set_register(&si->cpu, C, data);
       break;
     }
     case 0x4f: {
-      copy_register(&si->cpu, C, A);
+      register_move(si, C, A);
       break;
     }
     case 0x52: {
-      copy_register(&si->cpu, D, D);
+      register_move(si, D, D);
       break;
     }
     case 0x53: {
-      copy_register(&si->cpu, D, E);
+      register_move(si, D, E);
       break;
     }
     case 0x54: {
-      copy_register(&si->cpu, D, H);
+      register_move(si, D, H);
       break;
     }
     case 0x57: {
-      copy_register(&si->cpu, D, A);
+      register_move(si, D, A);
       break;
     }
-    case 0x76: {
-      halt(&si->cpu);
+    case 0x76:
+      halt(si);
       break;
-    }
     case 0x77: {
-      printf("MOV M,A");
+      print_instruction(si, "MOV M,A");
       uint8_t data = get_register(&si->cpu, A);
       register_pair_write_byte(si, H_PAIR, data);
       break;
     }
     case 0xc1: {
-      printf("POP B");
+      print_instruction(si, "POP B");
       uint16_t data = stack_pop_word(si);
       set_register_pair(&si->cpu, B_PAIR, data);
       break;
     }
     case 0xc2: {
       uint16_t address = fetch_word(si);
-      printf("JNZ %04x", address);
+      print_instruction(si, "JNZ %04x", address);
       jump_if_not_zero(&si->cpu, address);
       break;
     }
     case 0xc3: {
       uint16_t address = fetch_word(si);
-      printf("JMP %04x", address);
+      print_instruction(si, "JMP %04x", address);
       jump(&si->cpu, address);
       break;
     }
     case 0xc5: {
-      printf("PUSH B");
+      print_instruction(si, "PUSH B");
       uint16_t data = get_register_pair(&si->cpu, B_PAIR);
       stack_push_word(si, data);
       break;
     }
     case 0xc7: {
       uint8_t exp = 0;
-      printf("RST %d", exp);
+      print_instruction(si, "RST %d", exp);
       restart(&si->cpu, exp);
       break;
     }
     case 0xca: {
       uint16_t address = fetch_word(si);
-      printf("JZ %04x", address);
+      print_instruction(si, "JZ %04x", address);
       jump_if_zero(&si->cpu, address);
       break;
     }
     case 0xcc: {
       uint16_t address = fetch_word(si);
-      printf("CZ %04x", address);
-      subroutine_call_if_zero(&si->cpu, address);
+      print_instruction(si, "CZ %04x", address);
+      subroutine_call_if_zero(si, address);
       break;
     }
     case 0xcd: {
       uint16_t address = fetch_word(si);
-      printf("CALL %04x", address);
-      subroutine_call(&si->cpu, address);
+      print_instruction(si, "CALL %04x", address);
+      subroutine_call(si, address);
       break;
     }
     case 0xd1: {
-      printf("POP D");
+      print_instruction(si, "POP D");
       uint16_t data = stack_pop_word(si);
       set_register_pair(&si->cpu, D_PAIR, data);
       break;
     }
     case 0xd2: {
       uint16_t address = fetch_word(si);
-      printf("JNC %04x", address);
+      print_instruction(si, "JNC %04x", address);
       jump_if_no_carry(&si->cpu, address);
       break;
     }
     case 0xd5: {
-      printf("PUSH D");
+      print_instruction(si, "PUSH D");
       uint16_t data = get_register_pair(&si->cpu, D_PAIR);
       stack_push_word(si, data);
       break;
     }
     case 0xe1: {
-      printf("POP H");
+      print_instruction(si, "POP H");
       uint16_t data = stack_pop_word(si);
       set_register_pair(&si->cpu, H_PAIR, data);
       break;
     }
     case 0xe5: {
-      printf("PUSH H");
+      print_instruction(si, "PUSH H");
       uint16_t data = get_register_pair(&si->cpu, H_PAIR);
       stack_push_word(si, data);
       break;
     }
     case 0xea: {
       uint16_t address = fetch_word(si);
-      printf("JPE %04x", address);
+      print_instruction(si, "JPE %04x", address);
       jump_if_parity_even(&si->cpu, address);
       break;
     }
     case 0xf1: {
-      printf("POP PSW");
+      print_instruction(si, "POP PSW");
       uint16_t data = stack_pop_word(si);
       set_register_pair(&si->cpu, PSW, data);
       break;
     }
     case 0xf4: {
       uint16_t address = fetch_word(si);
-      printf("CP %04x", address);
-      subroutine_call_if_plus(&si->cpu, address);
+      print_instruction(si, "CP %04x", address);
+      subroutine_call_if_plus(si, address);
       break;
     }
     case 0xf5: {
-      printf("PUSH PSW");
+      print_instruction(si, "PUSH PSW");
       uint16_t data = get_register_pair(&si->cpu, PSW);
       stack_push_word(si, data);
       break;
     }
     case 0xfe: {
       uint8_t data = fetch_byte(si);
-      printf("CPI %02x", data);
+      print_instruction(si, "CPI %02x", data);
       compare_immediate_accumulator(&si->cpu, data);
       break;
     }
     default:
-      printf("UNKNOWN OPCODE\n");
+      print_instruction(si, "UNKNOWN OPCODE");
       exit(1);
   }
-  printf("\n");
-}
-
-void print_bus(SpaceInvaders *si) {
-  printf(si->write ? "w" : "r");
-  printf(" %04x %02x\n", si->address, si->data);
-}
-
-void print_stack(SpaceInvaders *si) {
-  // TODO: print from SP and print always entire "lines" (16 bytes)
-  int size = 0x10;
-  int address = VRAM_ADDRESS - size; // last section of RAM
-  memory_peek(&si->memory, address, size);
 }
 
 void run(SpaceInvaders *si) {
@@ -550,15 +592,14 @@ void run(SpaceInvaders *si) {
   program_rom(si);
 //  program_test_rom(si);
 //  program_hardcoded(si);
-  while (!is_halted(&si->cpu)) {
-    printf("--------------\n");
+  while (!si->halted) {
     print_state_8080(&si->cpu);
-    printf("``````````````\n");
-    print_bus(si);
-//    print_stack(si);
+    printf("··············\n");
+    print_stack(si);
     printf("~~~~~~~~~~~~~~\n");
+    peek_next_bytes(si);
     cycle(si);
     // TODO: implement clock
-    usleep(0.1 * 1000000);
+    usleep(1 * 1000000);
   }
 }

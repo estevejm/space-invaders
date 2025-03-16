@@ -13,6 +13,13 @@ enum Register {
   H, L,
 };
 
+static const char register_names[] = {
+  'A', 'F',
+  'B', 'C',
+  'D', 'E',
+  'H', 'L',
+};
+
 enum RegisterPair {
   PSW = 0,
   B_PAIR = 2,
@@ -21,11 +28,18 @@ enum RegisterPair {
   SP = 8 // not stored in registers array
 };
 
+static const char* register_pair_names[] = {
+  "PSW", "",
+  "B", "",
+  "D", "",
+  "H", "", // TODO: handle M when moving
+  "SP", "",
+};
+
 typedef struct i8080 {
   uint8_t registers[REGISTER_COUNT];
   uint16_t pc;
   uint16_t sp;
-  bool halted;
 } I8080;
 
 uint8_t get_register(I8080 *cpu, enum Register r);
@@ -45,22 +59,12 @@ void compare_immediate_accumulator(I8080 *cpu, uint8_t value);
 void decimal_adjust_accumulator(I8080 *cpu);
 
 void restart(I8080 *cpu, uint8_t value);
-void no_operation(I8080 *cpu);
-void halt(I8080 *cpu);
-bool is_halted(I8080 *cpu);
 
 void jump(I8080 *cpu, uint16_t address);
 void jump_if_zero(I8080 *cpu, uint16_t address);
 void jump_if_not_zero(I8080 *cpu, uint16_t address);
 void jump_if_parity_even(I8080 *cpu, uint16_t address);
 void jump_if_no_carry(I8080 *cpu, uint16_t address);
-
-void subroutine_call(I8080 *cpu, uint16_t address);
-void subroutine_call_if_zero(I8080 *cpu, uint16_t address);
-void subroutine_call_if_plus(I8080 *cpu, uint16_t address);
-
-void subroutine_return(I8080 *cpu);
-void subroutine_return_if_plus(I8080 *cpu);
 
 bool get_sign_flag(I8080 *cpu);
 bool get_zero_flag(I8080 *cpu);

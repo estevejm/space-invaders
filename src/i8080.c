@@ -7,13 +7,6 @@
 #define ZERO_FLAG_POS 6
 #define SIGN_FLAG_POS 7
 
-const char register_names[] = {
-  'A', 'F',
-  'B', 'C',
-  'D', 'E',
-  'H', 'L',
-};
-
 const int bitcount[] = {
   0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
   1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
@@ -100,7 +93,6 @@ void set_register(I8080 *cpu, enum Register r, uint8_t value) {
 }
 
 void copy_register(I8080 *cpu, enum Register dst, enum Register src) {
-  printf("MOV %c,%c", register_names[dst], register_names[src]);
   cpu->registers[dst] = cpu->registers[src];
 }
 
@@ -121,8 +113,6 @@ bool double_carry_occurs(uint32_t a, uint32_t b, uint32_t result) {
 }
 
 void increment_register(I8080 *cpu, enum Register r) {
-  printf("INR %c", register_names[r]);
-
   uint8_t a = cpu->registers[r];
   uint8_t b = 1;
   uint8_t result = a + b;
@@ -136,8 +126,6 @@ void increment_register(I8080 *cpu, enum Register r) {
 }
 
 void decrement_register(I8080 *cpu, enum Register r) {
-  printf("DCR %c", register_names[r]);
-
   uint8_t a = cpu->registers[r];
   uint8_t b = 1;
   uint8_t result = a - b; // TODO: use addition always? result = a + (-b) so we can have a uniform (aux) carry flag check?
@@ -204,8 +192,6 @@ void compare_immediate_accumulator(I8080 *cpu, uint8_t value) {
 //   9 = 0b1001 (max BCD value)
 // 9+6 = 0b1111
 void decimal_adjust_accumulator(I8080 *cpu) {
-  printf("DAA");
-
   uint8_t acc = get_register(cpu, A);
 
   uint8_t lsb = acc & 0xf;
@@ -235,19 +221,6 @@ void restart(I8080 *cpu, uint8_t value) {
   cpu->pc = bounded << 3;
 }
 
-void no_operation(I8080 *cpu) {
-  printf("NOP");
-}
-
-void halt(I8080 *cpu) {
-  printf("HLT");
-  cpu->halted = true;
-}
-
-bool is_halted(I8080 *cpu) {
-  return cpu->halted;
-}
-
 void jump(I8080 *cpu, uint16_t address) {
   cpu->pc = address;
 }
@@ -273,34 +246,6 @@ void jump_if_parity_even(I8080 *cpu, uint16_t address) {
 void jump_if_no_carry(I8080 *cpu, uint16_t address) {
   if (!get_carry_flag(cpu)) {
     jump(cpu, address);
-  }
-}
-
-void subroutine_call(I8080 *cpu, uint16_t address) {
-  // TODO: push current PC to stack to be used in return
-  jump(cpu, address);
-}
-
-void subroutine_call_if_zero(I8080 *cpu, uint16_t address) {
-  if (get_zero_flag(cpu)) {
-    subroutine_call(cpu, address);
-  }
-}
-
-void subroutine_call_if_plus(I8080 *cpu, uint16_t address) {
-  if (!get_sign_flag(cpu)) {
-    subroutine_call(cpu, address);
-  }
-}
-
-void subroutine_return(I8080 *cpu) {
-  // TODO: pop PC from stack
-  cpu->pc = 0;
-}
-
-void subroutine_return_if_plus(I8080 *cpu) {
-  if (!get_sign_flag(cpu)) {
-    subroutine_return(cpu);
   }
 }
 
