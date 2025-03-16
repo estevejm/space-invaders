@@ -53,6 +53,7 @@ void set_register_pair(I8080 *cpu, enum RegisterPair r, uint16_t value);
 void increment_register_pair(I8080 *cpu, enum RegisterPair r);
 void decrement_register_pair(I8080 *cpu, enum RegisterPair r);
 void double_add(I8080 *cpu, enum RegisterPair r);
+void exchange_registers(I8080 *cpu);
 
 void compare_immediate_accumulator(I8080 *cpu, uint8_t value);
 

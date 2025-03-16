@@ -43,7 +43,7 @@ void program_rom(SpaceInvaders *si) {
   load_rom(si, ROM_G_ADDRESS, "roms/INVADERS.G");
   load_rom(si, ROM_F_ADDRESS, "roms/INVADERS.F");
   load_rom(si, ROM_E_ADDRESS, "roms/INVADERS.E");
-  memory_peek(&si->memory, 0, 0x2000);
+  memory_dump(&si->memory);
 }
 
 void program_test_rom(SpaceInvaders *si) {
@@ -311,6 +311,11 @@ void cycle(SpaceInvaders *si) {
     case 0x18:
       no_operation(si);
       break;
+    case 0x19: {
+      print_instruction(si, "DAD D");
+      double_add(&si->cpu, D_PAIR);
+      break;
+    }
     case 0x1a: {
       print_instruction(si, "LDAX D");
       uint8_t data = register_pair_read_byte(si, D_PAIR);
@@ -364,6 +369,11 @@ void cycle(SpaceInvaders *si) {
     case 0x28:
       no_operation(si);
       break;
+    case 0x29: {
+      print_instruction(si, "DAD H");
+      double_add(&si->cpu, H_PAIR);
+      break;
+    }
     case 0x2b:
       register_pair_decrement(si, H_PAIR);
       break;
@@ -391,9 +401,20 @@ void cycle(SpaceInvaders *si) {
     case 0x33:
       register_pair_increment(si, SP);
       break;
+    case 0x36: {
+      uint8_t data = fetch_byte(si);
+      print_instruction(si, "MVI M,%02x", data);
+      register_pair_write_byte(si, H_PAIR, data);
+      break;
+    }
     case 0x38:
       no_operation(si);
       break;
+    case 0x39: {
+      print_instruction(si, "DAD SP");
+      double_add(&si->cpu, SP);
+      break;
+    }
     case 0x3a: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "LDA %04x", address);
@@ -414,6 +435,26 @@ void cycle(SpaceInvaders *si) {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "MVI A,%02x", data);
       set_register(&si->cpu, A, data);
+      break;
+    }
+    case 0x40: {
+      register_move(si, B, B);
+      break;
+    }
+    case 0x41: {
+      register_move(si, B, C);
+      break;
+    }
+    case 0x42: {
+      register_move(si, B, D);
+      break;
+    }
+    case 0x43: {
+      register_move(si, B, E);
+      break;
+    }
+    case 0x44: {
+      register_move(si, B, H);
       break;
     }
     case 0x45: {
@@ -438,6 +479,22 @@ void cycle(SpaceInvaders *si) {
       register_move(si, C, C);
       break;
     }
+    case 0x4a: {
+      register_move(si, C, D);
+      break;
+    }
+    case 0x4b: {
+      register_move(si, C, E);
+      break;
+    }
+    case 0x4c: {
+      register_move(si, C, H);
+      break;
+    }
+    case 0x4d: {
+      register_move(si, C, L);
+      break;
+    }
     case 0x4e: {
       print_instruction(si, "MOV C,M");
       uint8_t data = register_pair_read_byte(si, H_PAIR);
@@ -446,6 +503,14 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x4f: {
       register_move(si, C, A);
+      break;
+    }
+    case 0x50: {
+      register_move(si, D, B);
+      break;
+    }
+    case 0x51: {
+      register_move(si, D, C);
       break;
     }
     case 0x52: {
@@ -460,8 +525,156 @@ void cycle(SpaceInvaders *si) {
       register_move(si, D, H);
       break;
     }
+    case 0x55: {
+      register_move(si, D, L);
+      break;
+    }
+    case 0x56: {
+      print_instruction(si, "MOV D,M");
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      set_register(&si->cpu, D, data);
+      break;
+    }
     case 0x57: {
       register_move(si, D, A);
+      break;
+    }
+    case 0x58: {
+      register_move(si, E, B);
+      break;
+    }
+    case 0x59: {
+      register_move(si, E, C);
+      break;
+    }
+    case 0x5a: {
+      register_move(si, E, D);
+      break;
+    }
+    case 0x5b: {
+      register_move(si, E, E);
+      break;
+    }
+    case 0x5c: {
+      register_move(si, E, H);
+      break;
+    }
+    case 0x5d: {
+      register_move(si, E, L);
+      break;
+    }
+    case 0x5e: {
+      print_instruction(si, "MOV E,M");
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      set_register(&si->cpu, E, data);
+      break;
+    }
+    case 0x5f: {
+      register_move(si, E, A);
+      break;
+    }
+    case 0x60: {
+      register_move(si, H, B);
+      break;
+    }
+    case 0x61: {
+      register_move(si, H, C);
+      break;
+    }
+    case 0x62: {
+      register_move(si, H, D);
+      break;
+    }
+    case 0x63: {
+      register_move(si, H, E);
+      break;
+    }
+    case 0x64: {
+      register_move(si, H, H);
+      break;
+    }
+    case 0x65: {
+      register_move(si, H, L);
+      break;
+    }
+    case 0x66: {
+      print_instruction(si, "MOV H,M");
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      set_register(&si->cpu, H, data);
+      break;
+    }
+    case 0x67: {
+      register_move(si, H, A);
+      break;
+    }
+    case 0x68: {
+      register_move(si, L, B);
+      break;
+    }
+    case 0x69: {
+      register_move(si, L, C);
+      break;
+    }
+    case 0x6a: {
+      register_move(si, L, D);
+      break;
+    }
+    case 0x6b: {
+      register_move(si, L, E);
+      break;
+    }
+    case 0x6c: {
+      register_move(si, L, H);
+      break;
+    }
+    case 0x6d: {
+      register_move(si, L, L);
+      break;
+    }
+    case 0x6e: {
+      print_instruction(si, "MOV L,M");
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      set_register(&si->cpu, L, data);
+      break;
+    }
+    case 0x6f: {
+      register_move(si, L, A);
+      break;
+    }
+    case 0x70: {
+      print_instruction(si, "MOV M,B");
+      uint8_t data = get_register(&si->cpu, B);
+      register_pair_write_byte(si, H_PAIR, data);
+      break;
+    }
+    case 0x71: {
+      print_instruction(si, "MOV M,C");
+      uint8_t data = get_register(&si->cpu, C);
+      register_pair_write_byte(si, H_PAIR, data);
+      break;
+    }
+    case 0x72: {
+      print_instruction(si, "MOV M,D");
+      uint8_t data = get_register(&si->cpu, D);
+      register_pair_write_byte(si, H_PAIR, data);
+      break;
+    }
+    case 0x73: {
+      print_instruction(si, "MOV M,E");
+      uint8_t data = get_register(&si->cpu, E);
+      register_pair_write_byte(si, H_PAIR, data);
+      break;
+    }
+    case 0x74: {
+      print_instruction(si, "MOV M,H");
+      uint8_t data = get_register(&si->cpu, H);
+      register_pair_write_byte(si, H_PAIR, data);
+      break;
+    }
+    case 0x75: {
+      print_instruction(si, "MOV M,L");
+      uint8_t data = get_register(&si->cpu, L);
+      register_pair_write_byte(si, H_PAIR, data);
       break;
     }
     case 0x76:
@@ -471,6 +684,40 @@ void cycle(SpaceInvaders *si) {
       print_instruction(si, "MOV M,A");
       uint8_t data = get_register(&si->cpu, A);
       register_pair_write_byte(si, H_PAIR, data);
+      break;
+    }
+    case 0x78: {
+      register_move(si, A, B);
+      break;
+    }
+    case 0x79: {
+      register_move(si, A, C);
+      break;
+    }
+    case 0x7a: {
+      register_move(si, A, D);
+      break;
+    }
+    case 0x7b: {
+      register_move(si, A, E);
+      break;
+    }
+    case 0x7c: {
+      register_move(si, A, H);
+      break;
+    }
+    case 0x7d: {
+      register_move(si, A, L);
+      break;
+    }
+    case 0x7e: {
+      print_instruction(si, "MOV A,M");
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      set_register(&si->cpu, A, data);
+      break;
+    }
+    case 0x7f: {
+      register_move(si, A, A);
       break;
     }
     case 0xc1: {
@@ -503,6 +750,11 @@ void cycle(SpaceInvaders *si) {
       restart(&si->cpu, exp);
       break;
     }
+    case 0xc9: {
+      print_instruction(si, "RET");
+      subroutine_return(si);
+      break;
+    }
     case 0xca: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "JZ %04x", address);
@@ -533,6 +785,13 @@ void cycle(SpaceInvaders *si) {
       jump_if_no_carry(&si->cpu, address);
       break;
     }
+    case 0xd3: {
+      uint8_t data = fetch_byte(si);
+      print_instruction(si, "OUT %02x", data);
+      // TODO: https://computerarcheology.com/Arcade/SpaceInvaders/Hardware.html#io-ports
+      usleep(2 * 1000000);
+      break;
+    }
     case 0xd5: {
       print_instruction(si, "PUSH D");
       uint16_t data = get_register_pair(&si->cpu, D_PAIR);
@@ -555,6 +814,11 @@ void cycle(SpaceInvaders *si) {
       uint16_t address = fetch_word(si);
       print_instruction(si, "JPE %04x", address);
       jump_if_parity_even(&si->cpu, address);
+      break;
+    }
+    case 0xeb: {
+      print_instruction(si, "XCHG");
+      exchange_registers(&si->cpu);
       break;
     }
     case 0xf1: {
@@ -600,6 +864,6 @@ void run(SpaceInvaders *si) {
     peek_next_bytes(si);
     cycle(si);
     // TODO: implement clock
-    usleep(1 * 1000000);
+//    usleep(1 * 1000000);
   }
 }

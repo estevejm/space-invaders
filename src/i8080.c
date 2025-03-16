@@ -169,11 +169,18 @@ void decrement_register_pair(I8080 *cpu, enum RegisterPair r) {
 
 void double_add(I8080 *cpu, enum RegisterPair r) {
   // TODO: optimize H_PAIR use case? (just shift left 1 position)
-  uint32_t bc = get_register_pair(cpu, r);
+  uint32_t rp = get_register_pair(cpu, r);
   uint32_t hl = get_register_pair(cpu, H_PAIR);
-  uint32_t result = bc + hl;
+  uint32_t result = rp + hl;
   set_register_pair(cpu, H_PAIR, result);
-  set_carry_flag(cpu, double_carry_occurs(bc, hl, result));
+  set_carry_flag(cpu, double_carry_occurs(rp, hl, result));
+}
+
+void exchange_registers(I8080 *cpu) {
+  uint32_t de = get_register_pair(cpu, D_PAIR);
+  uint32_t hl = get_register_pair(cpu, H_PAIR);
+  set_register_pair(cpu, D_PAIR, hl);
+  set_register_pair(cpu, H_PAIR, de);
 }
 
 void compare_immediate_accumulator(I8080 *cpu, uint8_t value) {
