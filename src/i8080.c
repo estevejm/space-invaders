@@ -138,6 +138,18 @@ void decrement_register(I8080 *cpu, enum Register r) {
   cpu->registers[r] = result;
 }
 
+void rotate_accumulator_left(I8080 *cpu) {
+  uint8_t msb = cpu->registers[A] >> 7 & 1;
+  cpu->registers[A] = cpu->registers[A] << 1 | msb;
+  set_carry_flag(cpu, msb);
+}
+
+void rotate_accumulator_right(I8080 *cpu) {
+  uint8_t lsb = cpu->registers[A] & 1;
+  cpu->registers[A] = lsb << 7 | cpu->registers[A] >> 1;
+  set_carry_flag(cpu, lsb);
+}
+
 uint16_t get_register_pair(I8080 *cpu, enum RegisterPair r) {
   if (r == SP) {
     return cpu->sp;

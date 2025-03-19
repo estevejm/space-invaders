@@ -47,6 +47,8 @@ void set_register(I8080 *cpu, enum Register r, uint8_t value);
 void copy_register(I8080 *cpu, enum Register dst, enum Register src);
 void increment_register(I8080 *cpu, enum Register r);
 void decrement_register(I8080 *cpu, enum Register r);
+void rotate_accumulator_left(I8080 *cpu);
+void rotate_accumulator_right(I8080 *cpu);
 
 uint16_t get_register_pair(I8080 *cpu, enum RegisterPair r);
 void set_register_pair(I8080 *cpu, enum RegisterPair r, uint16_t value);

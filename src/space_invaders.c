@@ -54,10 +54,8 @@ void program_test_rom(SpaceInvaders *si) {
 
 void program_hardcoded(SpaceInvaders *si) {
   uint8_t program[] = {
-      0x06, 0x0b,
-      0x0e, 0x33,
-      0xc5,
-      0xe1,
+      0x3e, 0xf2,
+      0x07,
       0x76,
   };
   size_t size = sizeof(program)/sizeof(program[0]);
@@ -255,6 +253,11 @@ void cycle(SpaceInvaders *si) {
       set_register(&si->cpu, B, data);
       break;
     }
+    case 0x07: {
+      print_instruction(si, "RLC");
+      rotate_accumulator_left(&si->cpu);
+      break;
+    }
     case 0x08:
       no_operation(si);
       break;
@@ -282,6 +285,11 @@ void cycle(SpaceInvaders *si) {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "MVI C,%02x", data);
       set_register(&si->cpu, C, data);
+      break;
+    }
+    case 0x0f: {
+      print_instruction(si, "RRC");
+      rotate_accumulator_right(&si->cpu);
       break;
     }
     case 0x10:
@@ -788,8 +796,10 @@ void cycle(SpaceInvaders *si) {
     case 0xd3: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "OUT %02x", data);
-      // TODO: https://computerarcheology.com/Arcade/SpaceInvaders/Hardware.html#io-ports
-      usleep(2 * 1000000);
+      uint8_t a = get_register(&si->cpu, A);
+      if (data == 6) {
+        printf("* A register value (%02x) sent to output device %02x (%s)\n", a, data, "WATCHDOG");
+      }
       break;
     }
     case 0xd5: {
@@ -856,15 +866,14 @@ void run(SpaceInvaders *si) {
   program_rom(si);
 //  program_test_rom(si);
 //  program_hardcoded(si);
-  printf("····················\n");
   while (!si->halted) {
+    peek_next_bytes(si);
+    cycle(si);
     print_state_8080(&si->cpu);
     printf("····················\n");
     print_stack(si);
     printf("~~~~~~~~~~~~~~~~~~~~\n");
-    peek_next_bytes(si);
-    cycle(si);
     // TODO: implement clock
-    usleep(1 * 1000000);
+//    usleep(1 * 1000000);
   }
 }
