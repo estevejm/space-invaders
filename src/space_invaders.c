@@ -226,6 +226,58 @@ void register_move(SpaceInvaders *si, enum Register dst, enum Register src) {
   copy_register(&si->cpu, dst, src);
 }
 
+void restart(SpaceInvaders *si, uint8_t exp) {
+  uint8_t bounded = exp % 8;
+  print_instruction(si, "RST %d", bounded);
+  // TODO: push current PC to stack to be used by return
+  si->cpu.pc = bounded << 3;
+}
+
+void todo() {
+  printf("UNKNOWN OPCODE\n");
+  exit(1);
+}
+
+void register_add(SpaceInvaders *si, enum Register r) {
+  print_instruction(si, "ADD %c", register_names[r]);
+  todo();
+}
+
+void register_add_with_carry(SpaceInvaders *si, enum Register r) {
+  print_instruction(si, "ADC %c", register_names[r]);
+  todo();
+}
+
+void register_subtract(SpaceInvaders *si, enum Register r) {
+  print_instruction(si, "SUB %c", register_names[r]);
+  todo();
+}
+
+void register_subtract_with_borrow(SpaceInvaders *si, enum Register r) {
+  print_instruction(si, "SBB %c", register_names[r]);
+  todo();
+}
+
+void register_and(SpaceInvaders *si, enum Register r) {
+  print_instruction(si, "ANA %c", register_names[r]);
+  todo();
+}
+
+void register_or(SpaceInvaders *si, enum Register r) {
+  print_instruction(si, "ORA %c", register_names[r]);
+  todo();
+}
+
+void register_exclusive_or(SpaceInvaders *si, enum Register r) {
+  print_instruction(si, "XRA %c", register_names[r]);
+  todo();
+}
+
+void register_compare(SpaceInvaders *si, enum Register r) {
+  print_instruction(si, "CMP %c", register_names[r]);
+  todo();
+}
+
 // TODO: accurate cycle duration per instruction
 void cycle(SpaceInvaders *si) {
   uint8_t opcode = fetch_byte(si);
@@ -237,6 +289,11 @@ void cycle(SpaceInvaders *si) {
       uint16_t data = fetch_word(si);
       print_instruction(si, "LXI B,%04x", data);
       set_register_pair(&si->cpu, B_PAIR, data);
+      break;
+    }
+    case 0x02: {
+      print_instruction(si, "STAX B");
+      todo();
       break;
     }
     case 0x03:
@@ -302,6 +359,11 @@ void cycle(SpaceInvaders *si) {
       set_register_pair(&si->cpu, D_PAIR, data);
       break;
     }
+    case 0x12: {
+      print_instruction(si, "STAX D");
+      todo();
+      break;
+    }
     case 0x13:
       register_pair_increment(si, D_PAIR);
       break;
@@ -365,6 +427,12 @@ void cycle(SpaceInvaders *si) {
       set_register_pair(&si->cpu, H_PAIR, data);
       break;
     }
+    case 0x22: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "SHLD %04x", address);
+      todo();
+      break;
+    }
     case 0x23:
       register_pair_increment(si, H_PAIR);
       break;
@@ -393,6 +461,12 @@ void cycle(SpaceInvaders *si) {
       double_add(&si->cpu, H_PAIR);
       break;
     }
+    case 0x2a: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "LHLD %04x", address);
+      todo();
+      break;
+    }
     case 0x2b:
       register_pair_decrement(si, H_PAIR);
       break;
@@ -408,6 +482,11 @@ void cycle(SpaceInvaders *si) {
       set_register(&si->cpu, L, data);
       break;
     }
+    case 0x2f: {
+      print_instruction(si, "CMA");
+      todo();
+      break;
+    }
     case 0x30:
       no_operation(si);
       break;
@@ -417,13 +496,34 @@ void cycle(SpaceInvaders *si) {
       set_register_pair(&si->cpu, SP, data);
       break;
     }
+    case 0x32: {
+      uint16_t data = fetch_word(si);
+      print_instruction(si, "STA %04x", data);
+      todo();
+      break;
+    }
     case 0x33:
       register_pair_increment(si, SP);
       break;
+    case 0x34: {
+      print_instruction(si, "INR M");
+      todo();
+      break;
+    }
+    case 0x35: {
+      print_instruction(si, "DCR M");
+      todo();
+      break;
+    }
     case 0x36: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "MVI M,%02x", data);
       register_pair_write_byte(si, H_PAIR, data);
+      break;
+    }
+    case 0x37: {
+      print_instruction(si, "STC");
+      todo();
       break;
     }
     case 0x38:
@@ -454,6 +554,11 @@ void cycle(SpaceInvaders *si) {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "MVI A,%02x", data);
       set_register(&si->cpu, A, data);
+      break;
+    }
+    case 0x3f: {
+      print_instruction(si, "CMC");
+      todo();
       break;
     }
     case 0x40: {
@@ -739,6 +844,275 @@ void cycle(SpaceInvaders *si) {
       register_move(si, A, A);
       break;
     }
+    case 0x80: {
+      register_add(si, B);
+      break;
+    }
+    case 0x81: {
+      register_add(si, C);
+      break;
+    }
+    case 0x82: {
+      register_add(si, D);
+      break;
+    }
+    case 0x83: {
+      register_add(si, E);
+      break;
+    }
+    case 0x84: {
+      register_add(si, H);
+      break;
+    }
+    case 0x85: {
+      register_add(si, L);
+      break;
+    }
+    case 0x86: {
+      print_instruction(si, "ADD M");
+      todo();
+      break;
+    }
+    case 0x87: {
+      register_add(si, A);
+      break;
+    }
+    case 0x88: {
+      register_add(si, B);
+      break;
+    }
+    case 0x89: {
+      register_add(si, C);
+      break;
+    }
+    case 0x8a: {
+      register_add(si, D);
+      break;
+    }
+    case 0x8b: {
+      register_add(si, E);
+      break;
+    }
+    case 0x8c: {
+      register_add(si, H);
+      break;
+    }
+    case 0x8d: {
+      register_add(si, L);
+      break;
+    }
+    case 0x8e: {
+      print_instruction(si, "ADC M");
+      todo();
+      break;
+    }
+    case 0x8f: {
+      register_add(si, A);
+      break;
+    }
+    case 0x90: {
+      register_subtract(si, B);
+      break;
+    }
+    case 0x91: {
+      register_subtract(si, C);
+      break;
+    }
+    case 0x92: {
+      register_subtract(si, D);
+      break;
+    }
+    case 0x93: {
+      register_subtract(si, E);
+      break;
+    }
+    case 0x94: {
+      register_subtract(si, H);
+      break;
+    }
+    case 0x95: {
+      register_subtract(si, L);
+      break;
+    }
+    case 0x96: {
+      print_instruction(si, "SUB M");
+      todo();
+      break;
+    }
+    case 0x97: {
+      register_subtract(si, A);
+      break;
+    }
+    case 0x98: {
+      register_subtract_with_borrow(si, B);
+      break;
+    }
+    case 0x99: {
+      register_subtract_with_borrow(si, C);
+      break;
+    }
+    case 0x9a: {
+      register_subtract_with_borrow(si, D);
+      break;
+    }
+    case 0x9b: {
+      register_subtract_with_borrow(si, E);
+      break;
+    }
+    case 0x9c: {
+      register_subtract_with_borrow(si, H);
+      break;
+    }
+    case 0x9d: {
+      register_subtract_with_borrow(si, L);
+      break;
+    }
+    case 0x9e: {
+      print_instruction(si, "SBB M");
+      todo();
+      break;
+    }
+    case 0x9f: {
+      register_subtract_with_borrow(si, A);
+      break;
+    }
+    case 0xa0: {
+      register_and(si, B);
+      break;
+    }
+    case 0xa1: {
+      register_and(si, C);
+      break;
+    }
+    case 0xa2: {
+      register_and(si, D);
+      break;
+    }
+    case 0xa3: {
+      register_and(si, E);
+      break;
+    }
+    case 0xa4: {
+      register_and(si, H);
+      break;
+    }
+    case 0xa5: {
+      register_and(si, L);
+      break;
+    }
+    case 0xa6: {
+      print_instruction(si, "ANA M");
+      todo();
+      break;
+    }
+    case 0xa7: {
+      register_and(si, A);
+      break;
+    }
+    case 0xa8: {
+      register_exclusive_or(si, B);
+      break;
+    }
+    case 0xa9: {
+      register_exclusive_or(si, C);
+      break;
+    }
+    case 0xaa: {
+      register_exclusive_or(si, D);
+      break;
+    }
+    case 0xab: {
+      register_exclusive_or(si, E);
+      break;
+    }
+    case 0xac: {
+      register_exclusive_or(si, H);
+      break;
+    }
+    case 0xad: {
+      register_exclusive_or(si, L);
+      break;
+    }
+    case 0xae: {
+      print_instruction(si, "XRA M");
+      todo();
+      break;
+    }
+    case 0xaf: {
+      register_exclusive_or(si, A);
+      break;
+    }
+    case 0xb0: {
+      register_or(si, B);
+      break;
+    }
+    case 0xb1: {
+      register_or(si, C);
+      break;
+    }
+    case 0xb2: {
+      register_or(si, D);
+      break;
+    }
+    case 0xb3: {
+      register_or(si, E);
+      break;
+    }
+    case 0xb4: {
+      register_or(si, H);
+      break;
+    }
+    case 0xb5: {
+      register_or(si, L);
+      break;
+    }
+    case 0xb6: {
+      print_instruction(si, "ORA M");
+      todo();
+      break;
+    }
+    case 0xb7: {
+      register_or(si, A);
+      break;
+    }
+    case 0xb8: {
+      register_compare(si, B);
+      break;
+    }
+    case 0xb9: {
+      register_compare(si, C);
+      break;
+    }
+    case 0xba: {
+      register_compare(si, D);
+      break;
+    }
+    case 0xbb: {
+      register_compare(si, E);
+      break;
+    }
+    case 0xbc: {
+      register_compare(si, H);
+      break;
+    }
+    case 0xbd: {
+      register_compare(si, L);
+      break;
+    }
+    case 0xbe: {
+      print_instruction(si, "CMP M");
+      todo();
+      break;
+    }
+    case 0xbf: {
+      register_compare(si, A);
+      break;
+    }
+    case 0xc0: {
+      print_instruction(si, "RNZ");
+      todo();
+      break;
+    }
     case 0xc1: {
       print_instruction(si, "POP B");
       uint16_t data = stack_pop_word(si);
@@ -757,16 +1131,31 @@ void cycle(SpaceInvaders *si) {
       jump(&si->cpu, address);
       break;
     }
+    case 0xc4: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "CNZ %04x", address);
+      todo();
+      break;
+    }
     case 0xc5: {
       print_instruction(si, "PUSH B");
       uint16_t data = get_register_pair(&si->cpu, B_PAIR);
       stack_push_word(si, data);
       break;
     }
+    case 0xc6: {
+      uint8_t data = fetch_byte(si);
+      print_instruction(si, "ADI %02x", data);
+      todo();
+      break;
+    }
     case 0xc7: {
-      uint8_t exp = 0;
-      print_instruction(si, "RST %d", exp);
-      restart(&si->cpu, exp);
+      restart(si, 0);
+      break;
+    }
+    case 0xc8: {
+      print_instruction(si, "RZ");
+      todo();
       break;
     }
     case 0xc9: {
@@ -780,6 +1169,12 @@ void cycle(SpaceInvaders *si) {
       jump_if_zero(&si->cpu, address);
       break;
     }
+    case 0xcb: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "JMP %04x", address);
+      jump(&si->cpu, address);
+      break;
+    }
     case 0xcc: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "CZ %04x", address);
@@ -790,6 +1185,21 @@ void cycle(SpaceInvaders *si) {
       uint16_t address = fetch_word(si);
       print_instruction(si, "CALL %04x", address);
       subroutine_call(si, address);
+      break;
+    }
+    case 0xce: {
+      uint8_t data = fetch_byte(si);
+      print_instruction(si, "ACI %02x", data);
+      todo();
+      break;
+    }
+    case 0xcf: {
+      restart(si, 1);
+      break;
+    }
+    case 0xd0: {
+      print_instruction(si, "RNC");
+      todo();
       break;
     }
     case 0xd1: {
@@ -813,10 +1223,75 @@ void cycle(SpaceInvaders *si) {
       }
       break;
     }
+    case 0xd4: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "CNC %04x", address);
+      todo();
+      break;
+    }
     case 0xd5: {
       print_instruction(si, "PUSH D");
       uint16_t data = get_register_pair(&si->cpu, D_PAIR);
       stack_push_word(si, data);
+      break;
+    }
+    case 0xd6: {
+      uint8_t data = fetch_byte(si);
+      print_instruction(si, "SUI %02x", data);
+      todo();
+      break;
+    }
+    case 0xd7: {
+      restart(si, 2);
+      break;
+    }
+    case 0xd8: {
+      print_instruction(si, "RZ");
+      todo();
+      break;
+    }
+    case 0xd9: {
+      print_instruction(si, "RET");
+      subroutine_return(si);
+      break;
+    }
+    case 0xda: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "JC %04x", address);
+      todo();
+      break;
+    }
+    case 0xdb: {
+      uint8_t data = fetch_byte(si);
+      print_instruction(si, "IN %02x", data);
+      todo();
+      break;
+    }
+    case 0xdc: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "CC %04x", address);
+      todo();
+      break;
+    }
+    case 0xdd: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "CALL %04x", address);
+      subroutine_call(si, address);
+      break;
+    }
+    case 0xde: {
+      uint8_t data = fetch_byte(si);
+      print_instruction(si, "SBI %02x", data);
+      todo();
+      break;
+    }
+    case 0xdf: {
+      restart(si, 3);
+      break;
+    }
+    case 0xe0: {
+      print_instruction(si, "RPO");
+      todo();
       break;
     }
     case 0xe1: {
@@ -825,10 +1300,47 @@ void cycle(SpaceInvaders *si) {
       set_register_pair(&si->cpu, H_PAIR, data);
       break;
     }
+    case 0xe2: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "JPO %04x", address);
+      todo();
+      break;
+    }
+    case 0xe3: {
+      print_instruction(si, "XHTL");
+      todo();
+      break;
+    }
+    case 0xe4: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "CPO %04x", address);
+      todo();
+      break;
+    }
     case 0xe5: {
       print_instruction(si, "PUSH H");
       uint16_t data = get_register_pair(&si->cpu, H_PAIR);
       stack_push_word(si, data);
+      break;
+    }
+    case 0xe6: {
+      uint8_t data = fetch_byte(si);
+      print_instruction(si, "ANI %02x", data);
+      todo();
+      break;
+    }
+    case 0xe7: {
+      restart(si, 4);
+      break;
+    }
+    case 0xe8: {
+      print_instruction(si, "RPE");
+      todo();
+      break;
+    }
+    case 0xe9: {
+      print_instruction(si, "PCHL");
+      todo();
       break;
     }
     case 0xea: {
@@ -842,10 +1354,48 @@ void cycle(SpaceInvaders *si) {
       exchange_registers(&si->cpu);
       break;
     }
+    case 0xec: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "CPE %04x", address);
+      todo();
+      break;
+    }
+    case 0xed: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "CALL %04x", address);
+      subroutine_call(si, address);
+      break;
+    }
+    case 0xee: {
+      uint8_t data = fetch_byte(si);
+      print_instruction(si, "XRI %02x", data);
+      todo();
+      break;
+    }
+    case 0xef: {
+      restart(si, 5);
+      break;
+    }
+    case 0xf0: {
+      print_instruction(si, "RP");
+      todo();
+      break;
+    }
     case 0xf1: {
       print_instruction(si, "POP PSW");
       uint16_t data = stack_pop_word(si);
       set_register_pair(&si->cpu, PSW, data);
+      break;
+    }
+    case 0xf2: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "JP %04x", address);
+      todo();
+      break;
+    }
+    case 0xf3: {
+      print_instruction(si, "DI");
+      todo();
       break;
     }
     case 0xf4: {
@@ -860,15 +1410,59 @@ void cycle(SpaceInvaders *si) {
       stack_push_word(si, data);
       break;
     }
+    case 0xf6: {
+      uint8_t data = fetch_byte(si);
+      print_instruction(si, "ORI %02x", data);
+      todo();
+      break;
+    }
+    case 0xf7: {
+      restart(si, 6);
+      break;
+    }
+    case 0xf8: {
+      print_instruction(si, "RM");
+      todo();
+      break;
+    }
+    case 0xf9: {
+      print_instruction(si, "SPHL");
+      todo();
+      break;
+    }
+    case 0xfa: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "JM %04x", address);
+      todo();
+      break;
+    }
+    case 0xfb: {
+      print_instruction(si, "EI");
+      todo();
+      break;
+    }
+    case 0xfc: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "CM %04x", address);
+      todo();
+      break;
+    }
+    case 0xfd: {
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "CALL %04x", address);
+      subroutine_call(si, address);
+      break;
+    }
     case 0xfe: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "CPI %02x", data);
       compare_immediate_accumulator(&si->cpu, data);
       break;
     }
-    default:
-      print_instruction(si, "UNKNOWN OPCODE");
-      exit(1);
+    case 0xff: {
+      restart(si, 7);
+      break;
+    }
   }
 }
 

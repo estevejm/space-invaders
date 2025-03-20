@@ -63,8 +63,6 @@ void compare_immediate_accumulator(I8080 *cpu, uint8_t value);
 
 void decimal_adjust_accumulator(I8080 *cpu);
 
-void restart(I8080 *cpu, uint8_t value);
-
 void jump(I8080 *cpu, uint16_t address);
 void jump_if_zero(I8080 *cpu, uint16_t address);
 void jump_if_not_zero(I8080 *cpu, uint16_t address);

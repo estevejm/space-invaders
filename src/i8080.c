@@ -246,12 +246,6 @@ void decimal_adjust_accumulator(I8080 *cpu) {
   set_carry_flag(cpu, carry);
 }
 
-void restart(I8080 *cpu, uint8_t value) {
-  uint8_t bounded = value % 8;
-  // TODO: push current PC to stack to be used by return
-  cpu->pc = bounded << 3;
-}
-
 void jump(I8080 *cpu, uint16_t address) {
   cpu->pc = address;
 }
