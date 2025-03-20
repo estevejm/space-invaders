@@ -150,6 +150,18 @@ void rotate_accumulator_right(I8080 *cpu) {
   set_carry_flag(cpu, lsb);
 }
 
+void rotate_accumulator_left_through_carry(I8080 *cpu) {
+  uint8_t msb = cpu->registers[A] >> 7 & 1;
+  cpu->registers[A] = cpu->registers[A] << 1 | get_carry_flag(cpu);
+  set_carry_flag(cpu, msb);
+}
+
+void rotate_accumulator_right_through_carry(I8080 *cpu) {
+  uint8_t lsb = cpu->registers[A] & 1;
+  cpu->registers[A] = get_carry_flag(cpu) << 7 | cpu->registers[A] >> 1;
+  set_carry_flag(cpu, lsb);
+}
+
 uint16_t get_register_pair(I8080 *cpu, enum RegisterPair r) {
   if (r == SP) {
     return cpu->sp;

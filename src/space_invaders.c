@@ -54,8 +54,9 @@ void program_test_rom(SpaceInvaders *si) {
 
 void program_hardcoded(SpaceInvaders *si) {
   uint8_t program[] = {
-      0x3e, 0xf2,
-      0x07,
+      0x3e, 0xb5,
+      0x17,
+      0x1f,
       0x76,
   };
   size_t size = sizeof(program)/sizeof(program[0]);
@@ -316,6 +317,11 @@ void cycle(SpaceInvaders *si) {
       set_register(&si->cpu, D, data);
       break;
     }
+    case 0x17: {
+      print_instruction(si, "RAL");
+      rotate_accumulator_left_through_carry(&si->cpu);
+      break;
+    }
     case 0x18:
       no_operation(si);
       break;
@@ -343,6 +349,11 @@ void cycle(SpaceInvaders *si) {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "MVI E,%02x", data);
       set_register(&si->cpu, E, data);
+      break;
+    }
+    case 0x1f: {
+      print_instruction(si, "RAR");
+      rotate_accumulator_right_through_carry(&si->cpu);
       break;
     }
     case 0x20:
