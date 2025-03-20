@@ -138,6 +138,54 @@ void decrement_register(I8080 *cpu, enum Register r) {
   cpu->registers[r] = result;
 }
 
+void add_immediate_accumulator(I8080 *cpu, uint8_t value) {
+  uint8_t a = cpu->registers[A];
+  uint8_t b = value;
+  uint16_t result = a + b;
+
+  set_sign_flag(cpu, result);
+  set_zero_flag(cpu, result);
+  set_parity_flag(cpu, result);
+  set_auxiliary_carry_flag(cpu, half_carry_occurs(a, b, result));
+  set_carry_flag(cpu, carry_occurs(a, b, result));
+
+  cpu->registers[A] = result;
+}
+
+void and_immediate_accumulator(I8080 *cpu, uint8_t value) {
+  cpu->registers[A] &= value;
+
+  set_sign_flag(cpu, cpu->registers[A]);
+  set_zero_flag(cpu, cpu->registers[A]);
+  set_parity_flag(cpu, cpu->registers[A]);
+  set_carry_flag(cpu, 0);
+}
+
+void compare_immediate_accumulator(I8080 *cpu, uint8_t value) {
+  uint8_t a = cpu->registers[A];
+  uint8_t b = -value;
+  uint16_t result = a + b;
+
+  set_sign_flag(cpu, result);
+  set_zero_flag(cpu, result);
+  set_parity_flag(cpu, result);
+  set_auxiliary_carry_flag(cpu, !half_carry_occurs(a, b, result));
+  set_carry_flag(cpu, !carry_occurs(a, b, result));
+}
+
+void and_register_accumulator(I8080 *cpu, enum Register r) {
+  and_immediate_accumulator(cpu, cpu->registers[r]);
+}
+
+void exclusive_or_register_accumulator(I8080 *cpu, enum Register r) {
+  cpu->registers[A] ^= cpu->registers[r];
+
+  set_sign_flag(cpu, cpu->registers[A]);
+  set_zero_flag(cpu, cpu->registers[A]);
+  set_parity_flag(cpu, cpu->registers[A]);
+  set_carry_flag(cpu, 0);
+}
+
 void rotate_accumulator_left(I8080 *cpu) {
   uint8_t msb = cpu->registers[A] >> 7 & 1;
   cpu->registers[A] = cpu->registers[A] << 1 | msb;
@@ -207,18 +255,6 @@ void exchange_registers(I8080 *cpu) {
   set_register_pair(cpu, H_PAIR, de);
 }
 
-void compare_immediate_accumulator(I8080 *cpu, uint8_t value) {
-  uint8_t a = cpu->registers[A];
-  uint8_t b = -value;
-  uint16_t result = a + b;
-
-  set_sign_flag(cpu, result);
-  set_zero_flag(cpu, result);
-  set_parity_flag(cpu, result);
-  set_auxiliary_carry_flag(cpu, !half_carry_occurs(a, b, result));
-  set_carry_flag(cpu, !carry_occurs(a, b, result));
-}
-
 //   6 = 0b0110
 //   9 = 0b1001 (max BCD value)
 // 9+6 = 0b1111
@@ -274,6 +310,22 @@ void jump_if_no_carry(I8080 *cpu, uint16_t address) {
   }
 }
 
+void halt(I8080 *cpu) {
+  cpu->halt = true;
+}
+
+bool is_halted(I8080 *cpu) {
+  return cpu->halt;
+}
+
+void enable_interrupt(I8080 *cpu) {
+  cpu->interrupt_enabled = true;
+}
+
+void disable_interrupt(I8080 *cpu) {
+  cpu->interrupt_enabled = false;
+}
+
 void print_state_8080(I8080 *cpu) {
   for (int i = 0; i < REGISTER_COUNT; i++) {
     printf("%c|%02x", register_names[i], cpu->registers[i]);
@@ -282,15 +334,16 @@ void print_state_8080(I8080 *cpu) {
     } else {
       printf("  ");
       if (i == 1) {
-        printf("S Z A P C");
+        printf("S Z A P C  INTE=%d", cpu->interrupt_enabled);
       } else if (i == 3) {
         printf(
-          "%d %d %d %d %d",
+          "%d %d %d %d %d  HALT=%d",
           (int)get_sign_flag(cpu),
           (int)get_zero_flag(cpu),
           (int)get_auxiliary_carry_flag(cpu),
           (int)get_parity_flag(cpu),
-          (int)get_carry_flag(cpu)
+          (int)get_carry_flag(cpu),
+          cpu->halt
         );
       } else if (i == 5) {
         printf("SP | %04x", cpu->sp);

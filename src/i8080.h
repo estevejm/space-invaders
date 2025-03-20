@@ -40,6 +40,8 @@ typedef struct i8080 {
   uint8_t registers[REGISTER_COUNT];
   uint16_t pc;
   uint16_t sp;
+  bool interrupt_enabled;
+  bool halt;
 } I8080;
 
 uint8_t get_register(I8080 *cpu, enum Register r);
@@ -47,6 +49,12 @@ void set_register(I8080 *cpu, enum Register r, uint8_t value);
 void copy_register(I8080 *cpu, enum Register dst, enum Register src);
 void increment_register(I8080 *cpu, enum Register r);
 void decrement_register(I8080 *cpu, enum Register r);
+
+void add_immediate_accumulator(I8080 *cpu, uint8_t value);
+void and_immediate_accumulator(I8080 *cpu, uint8_t value);
+void compare_immediate_accumulator(I8080 *cpu, uint8_t value);
+void and_register_accumulator(I8080 *cpu, enum Register r);
+void exclusive_or_register_accumulator(I8080 *cpu, enum Register r);
 void rotate_accumulator_left(I8080 *cpu);
 void rotate_accumulator_right(I8080 *cpu);
 void rotate_accumulator_left_through_carry(I8080 *cpu);
@@ -58,8 +66,6 @@ void increment_register_pair(I8080 *cpu, enum RegisterPair r);
 void decrement_register_pair(I8080 *cpu, enum RegisterPair r);
 void double_add(I8080 *cpu, enum RegisterPair r);
 void exchange_registers(I8080 *cpu);
-
-void compare_immediate_accumulator(I8080 *cpu, uint8_t value);
 
 void decimal_adjust_accumulator(I8080 *cpu);
 
@@ -74,6 +80,11 @@ bool get_zero_flag(I8080 *cpu);
 bool get_auxiliary_carry_flag(I8080 *cpu);
 bool get_parity_flag(I8080 *cpu);
 bool get_carry_flag(I8080 *cpu);
+
+void halt(I8080 *cpu);
+bool is_halted(I8080 *cpu);
+void enable_interrupt(I8080 *cpu);
+void disable_interrupt(I8080 *cpu);
 
 void print_state_8080(I8080 *cpu);
 

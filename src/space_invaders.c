@@ -22,7 +22,6 @@ struct spaceInvaders {
   bool write;
   uint8_t data;
   uint16_t address;
-  bool halted;
 };
 
 void load_rom(SpaceInvaders *si, int address, char *filename) {
@@ -54,9 +53,9 @@ void program_test_rom(SpaceInvaders *si) {
 
 void program_hardcoded(SpaceInvaders *si) {
   uint8_t program[] = {
-      0x3e, 0xb5,
-      0x17,
-      0x1f,
+      0x3e, 0x14,
+      0xc6, 0x42,
+      0xc6, 0xbe,
       0x76,
   };
   size_t size = sizeof(program)/sizeof(program[0]);
@@ -196,11 +195,6 @@ void no_operation(SpaceInvaders *si) {
   print_instruction(si, "NOP");
 }
 
-void halt(SpaceInvaders *si) {
-  print_instruction(si, "HLT");
-  si->halted = true;
-}
-
 void register_increment(SpaceInvaders *si, enum Register r) {
   print_instruction(si, "INR %c", register_names[r]);
   increment_register(&si->cpu, r);
@@ -260,7 +254,7 @@ void register_subtract_with_borrow(SpaceInvaders *si, enum Register r) {
 
 void register_and(SpaceInvaders *si, enum Register r) {
   print_instruction(si, "ANA %c", register_names[r]);
-  todo();
+  and_register_accumulator(&si->cpu, r);
 }
 
 void register_or(SpaceInvaders *si, enum Register r) {
@@ -270,7 +264,7 @@ void register_or(SpaceInvaders *si, enum Register r) {
 
 void register_exclusive_or(SpaceInvaders *si, enum Register r) {
   print_instruction(si, "XRA %c", register_names[r]);
-  todo();
+  exclusive_or_register_accumulator(&si->cpu, r);
 }
 
 void register_compare(SpaceInvaders *si, enum Register r) {
@@ -497,9 +491,10 @@ void cycle(SpaceInvaders *si) {
       break;
     }
     case 0x32: {
-      uint16_t data = fetch_word(si);
-      print_instruction(si, "STA %04x", data);
-      todo();
+      uint16_t address = fetch_word(si);
+      print_instruction(si, "STA %04x", address);
+      uint8_t data = get_register(&si->cpu, A);
+      write_byte(si, address, data);
       break;
     }
     case 0x33:
@@ -802,7 +797,8 @@ void cycle(SpaceInvaders *si) {
       break;
     }
     case 0x76:
-      halt(si);
+      print_instruction(si, "HLT");
+      halt(&si->cpu);
       break;
     case 0x77: {
       print_instruction(si, "MOV M,A");
@@ -1146,7 +1142,7 @@ void cycle(SpaceInvaders *si) {
     case 0xc6: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "ADI %02x", data);
-      todo();
+      add_immediate_accumulator(&si->cpu, data);
       break;
     }
     case 0xc7: {
@@ -1326,7 +1322,7 @@ void cycle(SpaceInvaders *si) {
     case 0xe6: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "ANI %02x", data);
-      todo();
+      and_immediate_accumulator(&si->cpu, data);
       break;
     }
     case 0xe7: {
@@ -1395,7 +1391,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xf3: {
       print_instruction(si, "DI");
-      todo();
+      disable_interrupt(&si->cpu);
       break;
     }
     case 0xf4: {
@@ -1438,7 +1434,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xfb: {
       print_instruction(si, "EI");
-      todo();
+      enable_interrupt(&si->cpu);
       break;
     }
     case 0xfc: {
@@ -1471,7 +1467,7 @@ void run(SpaceInvaders *si) {
   program_rom(si);
 //  program_test_rom(si);
 //  program_hardcoded(si);
-  while (!si->halted) {
+  while (!is_halted(&si->cpu)) { // TODO: keep in halt state until reset, hold or interrupt
     peek_next_bytes(si);
     cycle(si);
     print_state_8080(&si->cpu);
