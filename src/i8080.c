@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "i8080.h"
 
-#define CARRY_FLAG_POS 1
+#define CARRY_FLAG_POS 0
 #define PARITY_FLAG_POS 2
 #define AUX_CARRY_FLAG_POS 4
 #define ZERO_FLAG_POS 6
@@ -310,12 +310,12 @@ void jump_if_no_carry(I8080 *cpu, uint16_t address) {
   }
 }
 
-void halt(I8080 *cpu) {
-  cpu->halt = true;
+void stop(I8080 *cpu) {
+  cpu->stopped = true;
 }
 
-bool is_halted(I8080 *cpu) {
-  return cpu->halt;
+bool is_stopped(I8080 *cpu) {
+  return cpu->stopped;
 }
 
 void enable_interrupt(I8080 *cpu) {
@@ -334,21 +334,20 @@ void print_state_8080(I8080 *cpu) {
     } else {
       printf("  ");
       if (i == 1) {
-        printf("S Z A P C  INTE=%d", cpu->interrupt_enabled);
+        printf("S Z - A - P - C");
       } else if (i == 3) {
         printf(
-          "%d %d %d %d %d  HALT=%d",
+          "%d %d * %d * %d * %d",
           (int)get_sign_flag(cpu),
           (int)get_zero_flag(cpu),
           (int)get_auxiliary_carry_flag(cpu),
           (int)get_parity_flag(cpu),
-          (int)get_carry_flag(cpu),
-          cpu->halt
+          (int)get_carry_flag(cpu)
         );
       } else if (i == 5) {
-        printf("SP | %04x", cpu->sp);
+        printf("SP|%04x  INTE|%d", cpu->sp, cpu->interrupt_enabled);
       } else if (i == 7) {
-        printf("PC | %04x", cpu->pc);
+        printf("PC|%04x  HALT|%d", cpu->pc, cpu->stopped);
       }
       printf("\n");
     }

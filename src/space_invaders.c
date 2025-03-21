@@ -46,9 +46,8 @@ void program_rom(SpaceInvaders *si) {
 }
 
 void program_test_rom(SpaceInvaders *si) {
-  load_rom(si, 0, "roms/8080PRE.COM");
-  memory_peek(&si->memory, 0, 0x200);
-  si->cpu.sp = MEMORY_BYTES;
+  load_rom(si, 0, "roms/8080EXER.COM");
+  memory_peek(&si->memory, 0, 0x2000);
 }
 
 void program_hardcoded(SpaceInvaders *si) {
@@ -61,7 +60,6 @@ void program_hardcoded(SpaceInvaders *si) {
   size_t size = sizeof(program)/sizeof(program[0]);
   memory_write(&si->memory, program, 0, size);
   memory_peek(&si->memory, 0, 0x20);
-  si->cpu.sp = MEMORY_BYTES;
 }
 
 SpaceInvaders *new() {
@@ -221,9 +219,10 @@ void register_move(SpaceInvaders *si, enum Register dst, enum Register src) {
 }
 
 void restart(SpaceInvaders *si, uint8_t exp) {
+  // TODO: check interrupt enabled?
   uint8_t bounded = exp % 8;
   print_instruction(si, "RST %d", bounded);
-  // TODO: push current PC to stack to be used by return
+  stack_push_word(si, si->cpu.pc);
   si->cpu.pc = bounded << 3;
 }
 
@@ -287,7 +286,8 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x02: {
       print_instruction(si, "STAX B");
-      todo();
+      uint8_t data = get_register(&si->cpu, A);
+      register_pair_write_byte(si, B_PAIR, data);
       break;
     }
     case 0x03:
@@ -355,7 +355,8 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x12: {
       print_instruction(si, "STAX D");
-      todo();
+      uint8_t data = get_register(&si->cpu, A);
+      register_pair_write_byte(si, D_PAIR, data);
       break;
     }
     case 0x13:
@@ -798,7 +799,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x76:
       print_instruction(si, "HLT");
-      halt(&si->cpu);
+      stop(&si->cpu);
       break;
     case 0x77: {
       print_instruction(si, "MOV M,A");
@@ -1464,17 +1465,17 @@ void cycle(SpaceInvaders *si) {
 
 void run(SpaceInvaders *si) {
   // TODO: specify rom to load from program arg
-  program_rom(si);
-//  program_test_rom(si);
+//  program_rom(si);
+  program_test_rom(si);
 //  program_hardcoded(si);
-  while (!is_halted(&si->cpu)) { // TODO: keep in halt state until reset, hold or interrupt
-    peek_next_bytes(si);
+  while (!is_stopped(&si->cpu)) { // TODO: keep in halt state until interrupt
+//    peek_next_bytes(si);
     cycle(si);
     print_state_8080(&si->cpu);
     printf("····················\n");
     print_stack(si);
     printf("~~~~~~~~~~~~~~~~~~~~\n");
     // TODO: implement clock
-//    usleep(1 * 1000000);
+//    usleep(0.1 * 1000000);
   }
 }

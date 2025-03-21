@@ -41,7 +41,7 @@ typedef struct i8080 {
   uint16_t pc;
   uint16_t sp;
   bool interrupt_enabled;
-  bool halt;
+  bool stopped;
 } I8080;
 
 uint8_t get_register(I8080 *cpu, enum Register r);
@@ -81,8 +81,8 @@ bool get_auxiliary_carry_flag(I8080 *cpu);
 bool get_parity_flag(I8080 *cpu);
 bool get_carry_flag(I8080 *cpu);
 
-void halt(I8080 *cpu);
-bool is_halted(I8080 *cpu);
+void stop(I8080 *cpu);
+bool is_stopped(I8080 *cpu);
 void enable_interrupt(I8080 *cpu);
 void disable_interrupt(I8080 *cpu);
 

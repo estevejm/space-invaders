@@ -1,9 +1,13 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "memory.h"
 
 void memory_write(Memory *memory, uint8_t bytes[], int address, int size) {
-  // TODO: check if there's enough memory to write the desired size
+  if (address + size > MEMORY_BYTES) {
+    printf("Error: address out of bounds\n");
+    exit(1);
+  }
   memcpy(memory->bytes + address, bytes, size);
 }
 
