@@ -52,9 +52,8 @@ void program_test_rom(SpaceInvaders *si) {
 
 void program_hardcoded(SpaceInvaders *si) {
   uint8_t program[] = {
-      0x3e, 0x14,
-      0xc6, 0x42,
-      0xc6, 0xbe,
+      0x3e, 0x3e,
+      0x97,
       0x76,
   };
   size_t size = sizeof(program)/sizeof(program[0]);
@@ -233,22 +232,22 @@ void todo() {
 
 void register_add(SpaceInvaders *si, enum Register r) {
   print_instruction(si, "ADD %c", register_names[r]);
-  todo();
+  add_register_accumulator(&si->cpu, r);
 }
 
 void register_add_with_carry(SpaceInvaders *si, enum Register r) {
   print_instruction(si, "ADC %c", register_names[r]);
-  todo();
+  add_register_accumulator_with_carry(&si->cpu, r);
 }
 
 void register_subtract(SpaceInvaders *si, enum Register r) {
   print_instruction(si, "SUB %c", register_names[r]);
-  todo();
+  subtract_register_accumulator(&si->cpu, r);
 }
 
 void register_subtract_with_borrow(SpaceInvaders *si, enum Register r) {
   print_instruction(si, "SBB %c", register_names[r]);
-  todo();
+  subtract_register_accumulator_with_borrow(&si->cpu, r);
 }
 
 void register_and(SpaceInvaders *si, enum Register r) {
@@ -258,7 +257,7 @@ void register_and(SpaceInvaders *si, enum Register r) {
 
 void register_or(SpaceInvaders *si, enum Register r) {
   print_instruction(si, "ORA %c", register_names[r]);
-  todo();
+  or_register_accumulator(&si->cpu, r);
 }
 
 void register_exclusive_or(SpaceInvaders *si, enum Register r) {
@@ -268,7 +267,7 @@ void register_exclusive_or(SpaceInvaders *si, enum Register r) {
 
 void register_compare(SpaceInvaders *si, enum Register r) {
   print_instruction(si, "CMP %c", register_names[r]);
-  todo();
+  compare_register_accumulator(&si->cpu, r);
 }
 
 // TODO: accurate cycle duration per instruction
@@ -867,7 +866,8 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x86: {
       print_instruction(si, "ADD M");
-      todo();
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      add_accumulator(&si->cpu, data);
       break;
     }
     case 0x87: {
@@ -875,36 +875,37 @@ void cycle(SpaceInvaders *si) {
       break;
     }
     case 0x88: {
-      register_add(si, B);
+      register_add_with_carry(si, B);
       break;
     }
     case 0x89: {
-      register_add(si, C);
+      register_add_with_carry(si, C);
       break;
     }
     case 0x8a: {
-      register_add(si, D);
+      register_add_with_carry(si, D);
       break;
     }
     case 0x8b: {
-      register_add(si, E);
+      register_add_with_carry(si, E);
       break;
     }
     case 0x8c: {
-      register_add(si, H);
+      register_add_with_carry(si, H);
       break;
     }
     case 0x8d: {
-      register_add(si, L);
+      register_add_with_carry(si, L);
       break;
     }
     case 0x8e: {
       print_instruction(si, "ADC M");
-      todo();
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      add_with_carry_accumulator(&si->cpu, data);
       break;
     }
     case 0x8f: {
-      register_add(si, A);
+      register_add_with_carry(si, A);
       break;
     }
     case 0x90: {
@@ -933,6 +934,8 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x96: {
       print_instruction(si, "SUB M");
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      subtract_accumulator(&si->cpu, data);
       todo();
       break;
     }
@@ -966,7 +969,8 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x9e: {
       print_instruction(si, "SBB M");
-      todo();
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      subtract_with_borrow_accumulator(&si->cpu, data);
       break;
     }
     case 0x9f: {
@@ -999,7 +1003,8 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xa6: {
       print_instruction(si, "ANA M");
-      todo();
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      and_accumulator(&si->cpu, data);
       break;
     }
     case 0xa7: {
@@ -1032,7 +1037,8 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xae: {
       print_instruction(si, "XRA M");
-      todo();
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      exclusive_or_accumulator(&si->cpu, data);
       break;
     }
     case 0xaf: {
@@ -1065,7 +1071,8 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xb6: {
       print_instruction(si, "ORA M");
-      todo();
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      or_accumulator(&si->cpu, data);
       break;
     }
     case 0xb7: {
@@ -1098,7 +1105,8 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xbe: {
       print_instruction(si, "CMP M");
-      todo();
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      compare_accumulator(&si->cpu, data);
       break;
     }
     case 0xbf: {
@@ -1143,7 +1151,7 @@ void cycle(SpaceInvaders *si) {
     case 0xc6: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "ADI %02x", data);
-      add_immediate_accumulator(&si->cpu, data);
+      add_accumulator(&si->cpu, data);
       break;
     }
     case 0xc7: {
@@ -1187,7 +1195,7 @@ void cycle(SpaceInvaders *si) {
     case 0xce: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "ACI %02x", data);
-      todo();
+      add_register_accumulator_with_carry(&si->cpu, data);
       break;
     }
     case 0xcf: {
@@ -1215,8 +1223,12 @@ void cycle(SpaceInvaders *si) {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "OUT %02x", data);
       uint8_t a = get_register(&si->cpu, A);
-      if (data == 6) {
+      if (data == 3 || data == 5) {
+        printf("* A register value (%02x) sent to output device %02x (%s) - TODO\n", a, data, "SOUND");
+      } else if (data == 6) {
         printf("* A register value (%02x) sent to output device %02x (%s)\n", a, data, "WATCHDOG");
+      } else {
+        todo();
       }
       break;
     }
@@ -1235,7 +1247,7 @@ void cycle(SpaceInvaders *si) {
     case 0xd6: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "SUI %02x", data);
-      todo();
+      subtract_accumulator(&si->cpu, data);
       break;
     }
     case 0xd7: {
@@ -1279,7 +1291,7 @@ void cycle(SpaceInvaders *si) {
     case 0xde: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "SBI %02x", data);
-      todo();
+      subtract_with_borrow_accumulator(&si->cpu, data);
       break;
     }
     case 0xdf: {
@@ -1323,7 +1335,7 @@ void cycle(SpaceInvaders *si) {
     case 0xe6: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "ANI %02x", data);
-      and_immediate_accumulator(&si->cpu, data);
+      and_accumulator(&si->cpu, data);
       break;
     }
     case 0xe7: {
@@ -1366,7 +1378,7 @@ void cycle(SpaceInvaders *si) {
     case 0xee: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "XRI %02x", data);
-      todo();
+      exclusive_or_accumulator(&si->cpu, data);
       break;
     }
     case 0xef: {
@@ -1410,7 +1422,7 @@ void cycle(SpaceInvaders *si) {
     case 0xf6: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "ORI %02x", data);
-      todo();
+      or_accumulator(&si->cpu, data);
       break;
     }
     case 0xf7: {
@@ -1453,7 +1465,7 @@ void cycle(SpaceInvaders *si) {
     case 0xfe: {
       uint8_t data = fetch_byte(si);
       print_instruction(si, "CPI %02x", data);
-      compare_immediate_accumulator(&si->cpu, data);
+      compare_accumulator(&si->cpu, data);
       break;
     }
     case 0xff: {
@@ -1465,8 +1477,8 @@ void cycle(SpaceInvaders *si) {
 
 void run(SpaceInvaders *si) {
   // TODO: specify rom to load from program arg
-//  program_rom(si);
-  program_test_rom(si);
+  program_rom(si);
+//  program_test_rom(si);
 //  program_hardcoded(si);
   while (!is_stopped(&si->cpu)) { // TODO: keep in halt state until interrupt
 //    peek_next_bytes(si);

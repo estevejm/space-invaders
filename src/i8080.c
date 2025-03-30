@@ -96,20 +96,46 @@ void copy_register(I8080 *cpu, enum Register dst, enum Register src) {
   cpu->registers[dst] = cpu->registers[src];
 }
 
-bool nth_carry_occurs(uint32_t a, uint32_t b, uint32_t result, int n) {
-  return (a ^ b ^ result) >> n & 1;
+bool nth_carry_occurs(uint32_t a, uint32_t b, uint32_t cin, uint32_t result, int n) {
+  return (a ^ b ^ cin ^ result) >> n & 1;
 }
 
 bool half_carry_occurs(int8_t a, uint8_t b, uint8_t result) {
-  return nth_carry_occurs(a, b, result, 4);
+  return nth_carry_occurs(a, b, 0, result, 4);
+}
+
+bool half_carry_occurs_with_carry_in(int8_t a, int8_t b, int8_t cin, int8_t result) {
+  return nth_carry_occurs(a, b, cin, result, 4);
 }
 
 bool carry_occurs(int16_t a, uint16_t b, uint16_t result) {
-  return nth_carry_occurs(a, b, result, 8);
+  return nth_carry_occurs(a, b, 0, result, 8);
+}
+
+bool carry_occurs_with_carry_in(int16_t a, uint16_t b, uint16_t cin, uint16_t result) {
+  return nth_carry_occurs(a, b, cin, result, 8);
 }
 
 bool double_carry_occurs(uint32_t a, uint32_t b, uint32_t result) {
-  return nth_carry_occurs(a, b, result, 16);
+  return nth_carry_occurs(a, b, 0, result, 16);
+}
+
+void add_full_accumulator(I8080 *cpu, uint8_t value, uint8_t cin, bool sub) {
+  uint8_t a = cpu->registers[A];
+  uint8_t b = sub ? -value : value;
+  uint16_t result = a + b + cin;
+
+  set_sign_flag(cpu, result);
+  set_zero_flag(cpu, result);
+  set_parity_flag(cpu, result);
+
+  bool hc = half_carry_occurs_with_carry_in(a, b, cin, result);
+  set_auxiliary_carry_flag(cpu, sub ? !hc : hc);
+
+  bool c = carry_occurs_with_carry_in(a, b, cin, result);
+  set_carry_flag(cpu, sub ? !c : c);
+
+  cpu->registers[A] = result;
 }
 
 void increment_register(I8080 *cpu, enum Register r) {
@@ -138,21 +164,39 @@ void decrement_register(I8080 *cpu, enum Register r) {
   cpu->registers[r] = result;
 }
 
-void add_immediate_accumulator(I8080 *cpu, uint8_t value) {
-  uint8_t a = cpu->registers[A];
-  uint8_t b = value;
-  uint16_t result = a + b;
-
-  set_sign_flag(cpu, result);
-  set_zero_flag(cpu, result);
-  set_parity_flag(cpu, result);
-  set_auxiliary_carry_flag(cpu, half_carry_occurs(a, b, result));
-  set_carry_flag(cpu, carry_occurs(a, b, result));
-
-  cpu->registers[A] = result;
+void add_accumulator(I8080 *cpu, uint8_t value) {
+  add_full_accumulator(cpu, value, 0, false);
 }
 
-void and_immediate_accumulator(I8080 *cpu, uint8_t value) {
+void subtract_accumulator(I8080 *cpu, uint8_t value) {
+  add_full_accumulator(cpu, value, 0, true);
+}
+
+void add_with_carry_accumulator(I8080 *cpu, uint8_t value) {
+  add_full_accumulator(cpu, value, get_carry_flag(cpu), false);
+}
+
+void subtract_with_borrow_accumulator(I8080 *cpu, uint8_t value) {
+  add_full_accumulator(cpu, value, get_carry_flag(cpu), true);
+}
+
+void add_register_accumulator(I8080 *cpu, enum Register r) {
+  add_accumulator(cpu, cpu->registers[r]);
+}
+
+void add_register_accumulator_with_carry(I8080 *cpu, enum Register r) {
+  add_with_carry_accumulator(cpu, cpu->registers[r]);
+}
+
+void subtract_register_accumulator(I8080 *cpu, enum Register r) {
+  subtract_accumulator(cpu, cpu->registers[r]);
+}
+
+void subtract_register_accumulator_with_borrow(I8080 *cpu, enum Register r) {
+  subtract_with_borrow_accumulator(cpu, cpu->registers[r]);
+}
+
+void and_accumulator(I8080 *cpu, uint8_t value) {
   cpu->registers[A] &= value;
 
   set_sign_flag(cpu, cpu->registers[A]);
@@ -161,7 +205,38 @@ void and_immediate_accumulator(I8080 *cpu, uint8_t value) {
   set_carry_flag(cpu, 0);
 }
 
-void compare_immediate_accumulator(I8080 *cpu, uint8_t value) {
+void and_register_accumulator(I8080 *cpu, enum Register r) {
+  and_accumulator(cpu, cpu->registers[r]);
+}
+
+void or_accumulator(I8080 *cpu, uint8_t value) {
+  cpu->registers[A] |= value;
+
+  set_sign_flag(cpu, cpu->registers[A]);
+  set_zero_flag(cpu, cpu->registers[A]);
+  set_parity_flag(cpu, cpu->registers[A]);
+  set_carry_flag(cpu, 0);
+}
+
+void or_register_accumulator(I8080 *cpu, enum Register r) {
+  or_accumulator(cpu, cpu->registers[r]);
+}
+
+void exclusive_or_accumulator(I8080 *cpu, uint8_t value) {
+  cpu->registers[A] ^= value;
+
+  set_sign_flag(cpu, cpu->registers[A]);
+  set_zero_flag(cpu, cpu->registers[A]);
+  set_parity_flag(cpu, cpu->registers[A]);
+  set_carry_flag(cpu, 0);
+}
+
+void exclusive_or_register_accumulator(I8080 *cpu, enum Register r) {
+  exclusive_or_accumulator(cpu, cpu->registers[r]);
+}
+
+// TODO: reuse subtract logic
+void compare_accumulator(I8080 *cpu, uint8_t value) {
   uint8_t a = cpu->registers[A];
   uint8_t b = -value;
   uint16_t result = a + b;
@@ -173,17 +248,8 @@ void compare_immediate_accumulator(I8080 *cpu, uint8_t value) {
   set_carry_flag(cpu, !carry_occurs(a, b, result));
 }
 
-void and_register_accumulator(I8080 *cpu, enum Register r) {
-  and_immediate_accumulator(cpu, cpu->registers[r]);
-}
-
-void exclusive_or_register_accumulator(I8080 *cpu, enum Register r) {
-  cpu->registers[A] ^= cpu->registers[r];
-
-  set_sign_flag(cpu, cpu->registers[A]);
-  set_zero_flag(cpu, cpu->registers[A]);
-  set_parity_flag(cpu, cpu->registers[A]);
-  set_carry_flag(cpu, 0);
+void compare_register_accumulator(I8080 *cpu, enum Register r) {
+  compare_accumulator(cpu, cpu->registers[r]);
 }
 
 void rotate_accumulator_left(I8080 *cpu) {
