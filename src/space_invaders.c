@@ -52,12 +52,8 @@ void program_test_rom(SpaceInvaders *si) {
 
 void program_hardcoded(SpaceInvaders *si) {
   uint8_t program[] = {
-      0x37,
-      0x3f,
-      0x3f,
-      0x37,
-      0x3f,
-      0x37,
+      0x34,
+      0x35,
       0x76,
   };
   size_t size = sizeof(program)/sizeof(program[0]);
@@ -508,12 +504,14 @@ void cycle(SpaceInvaders *si) {
       break;
     case 0x34: {
       print_instruction(si, "INR M");
-      todo();
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      register_pair_write_byte(si, H_PAIR, data + 1);
       break;
     }
     case 0x35: {
       print_instruction(si, "DCR M");
-      todo();
+      uint8_t data = register_pair_read_byte(si, H_PAIR);
+      register_pair_write_byte(si, H_PAIR, data - 1);
       break;
     }
     case 0x36: {
