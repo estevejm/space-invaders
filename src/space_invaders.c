@@ -52,8 +52,12 @@ void program_test_rom(SpaceInvaders *si) {
 
 void program_hardcoded(SpaceInvaders *si) {
   uint8_t program[] = {
-      0x3e, 0x3e,
-      0x97,
+      0x26, 0xae,
+      0x2e, 0x29,
+      0x22, 0x0A, 0x01,
+      0x26, 0xff,
+      0x2e, 0xff,
+      0x2a, 0x0A, 0x01,
       0x76,
   };
   size_t size = sizeof(program)/sizeof(program[0]);
@@ -424,7 +428,8 @@ void cycle(SpaceInvaders *si) {
     case 0x22: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "SHLD %04x", address);
-      todo();
+      uint16_t data = get_register_pair(&si->cpu, H_PAIR);
+      write_word(si, address, data);
       break;
     }
     case 0x23:
@@ -458,7 +463,8 @@ void cycle(SpaceInvaders *si) {
     case 0x2a: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "LHLD %04x", address);
-      todo();
+      uint16_t data = read_word(si, address);
+      set_register_pair(&si->cpu, H_PAIR, data);
       break;
     }
     case 0x2b:
@@ -1477,9 +1483,9 @@ void cycle(SpaceInvaders *si) {
 
 void run(SpaceInvaders *si) {
   // TODO: specify rom to load from program arg
-  program_rom(si);
+//  program_rom(si);
 //  program_test_rom(si);
-//  program_hardcoded(si);
+  program_hardcoded(si);
   while (!is_stopped(&si->cpu)) { // TODO: keep in halt state until interrupt
 //    peek_next_bytes(si);
     cycle(si);
@@ -1487,6 +1493,7 @@ void run(SpaceInvaders *si) {
     printf("····················\n");
     print_stack(si);
     printf("~~~~~~~~~~~~~~~~~~~~\n");
+    memory_peek(&si->memory, 0, 0x200);
     // TODO: implement clock
 //    usleep(0.1 * 1000000);
   }
