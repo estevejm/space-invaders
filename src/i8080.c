@@ -276,6 +276,18 @@ void rotate_accumulator_right_through_carry(I8080 *cpu) {
   set_carry_flag(cpu, lsb);
 }
 
+void complement_accumulator(I8080 *cpu) {
+  cpu->registers[A] = ~cpu->registers[A];
+}
+
+void complement_carry(I8080 *cpu) {
+  set_carry_flag(cpu, !get_carry_flag(cpu));
+}
+
+void set_carry(I8080 *cpu) {
+  set_carry_flag(cpu, 1);
+}
+
 uint16_t get_register_pair(I8080 *cpu, enum RegisterPair r) {
   if (r == SP) {
     return cpu->sp;

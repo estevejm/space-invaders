@@ -52,12 +52,12 @@ void program_test_rom(SpaceInvaders *si) {
 
 void program_hardcoded(SpaceInvaders *si) {
   uint8_t program[] = {
-      0x26, 0xae,
-      0x2e, 0x29,
-      0x22, 0x0A, 0x01,
-      0x26, 0xff,
-      0x2e, 0xff,
-      0x2a, 0x0A, 0x01,
+      0x37,
+      0x3f,
+      0x3f,
+      0x37,
+      0x3f,
+      0x37,
       0x76,
   };
   size_t size = sizeof(program)/sizeof(program[0]);
@@ -484,7 +484,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x2f: {
       print_instruction(si, "CMA");
-      todo();
+      complement_accumulator(&si->cpu);
       break;
     }
     case 0x30:
@@ -524,7 +524,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x37: {
       print_instruction(si, "STC");
-      todo();
+      set_carry(&si->cpu);
       break;
     }
     case 0x38:
@@ -559,7 +559,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0x3f: {
       print_instruction(si, "CMC");
-      todo();
+      complement_carry(&si->cpu);
       break;
     }
     case 0x40: {
@@ -1493,7 +1493,6 @@ void run(SpaceInvaders *si) {
     printf("····················\n");
     print_stack(si);
     printf("~~~~~~~~~~~~~~~~~~~~\n");
-    memory_peek(&si->memory, 0, 0x200);
     // TODO: implement clock
 //    usleep(0.1 * 1000000);
   }
