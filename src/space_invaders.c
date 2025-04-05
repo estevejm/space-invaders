@@ -52,8 +52,12 @@ void program_test_rom(SpaceInvaders *si) {
 
 void program_hardcoded(SpaceInvaders *si) {
   uint8_t program[] = {
-      0x34,
-      0x35,
+      0x26, 0x0d,
+      0x2e, 0xf0,
+      0xe5,
+      0x26, 0x0b,
+      0x2e, 0x3c,
+      0xe3,
       0x76,
   };
   size_t size = sizeof(program)/sizeof(program[0]);
@@ -1397,8 +1401,11 @@ void cycle(SpaceInvaders *si) {
       break;
     }
     case 0xe3: {
-      print_instruction(si, "XHTL");
-      todo();
+      print_instruction(si, "XTHL");
+      uint16_t sp_data = read_word(si, si->cpu.sp);
+      uint16_t hl_data = get_register_pair(&si->cpu, H_PAIR);
+      set_register_pair(&si->cpu, H_PAIR, sp_data);
+      write_word(si, si->cpu.sp, hl_data);
       break;
     }
     case 0xe4: {
