@@ -364,6 +364,18 @@ void jump(I8080 *cpu, uint16_t address) {
   cpu->pc = address;
 }
 
+void jump_if_carry(I8080 *cpu, uint16_t address) {
+  if (get_carry_flag(cpu)) {
+    jump(cpu, address);
+  }
+}
+
+void jump_if_no_carry(I8080 *cpu, uint16_t address) {
+  if (!get_carry_flag(cpu)) {
+    jump(cpu, address);
+  }
+}
+
 void jump_if_zero(I8080 *cpu, uint16_t address) {
   if (get_zero_flag(cpu)) {
     jump(cpu, address);
@@ -376,14 +388,26 @@ void jump_if_not_zero(I8080 *cpu, uint16_t address) {
   }
 }
 
+void jump_if_minus(I8080 *cpu, uint16_t address) {
+  if (get_sign_flag(cpu)) {
+    jump(cpu, address);
+  }
+}
+
+void jump_if_positive(I8080 *cpu, uint16_t address) {
+  if (!get_sign_flag(cpu)) {
+    jump(cpu, address);
+  }
+}
+
 void jump_if_parity_even(I8080 *cpu, uint16_t address) {
   if (get_parity_flag(cpu)) {
     jump(cpu, address);
   }
 }
 
-void jump_if_no_carry(I8080 *cpu, uint16_t address) {
-  if (!get_carry_flag(cpu)) {
+void jump_if_parity_odd(I8080 *cpu, uint16_t address) {
+  if (get_parity_flag(cpu)) {
     jump(cpu, address);
   }
 }

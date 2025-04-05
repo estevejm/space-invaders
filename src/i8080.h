@@ -85,10 +85,14 @@ void exchange_registers(I8080 *cpu);
 void decimal_adjust_accumulator(I8080 *cpu);
 
 void jump(I8080 *cpu, uint16_t address);
+void jump_if_carry(I8080 *cpu, uint16_t address);
+void jump_if_no_carry(I8080 *cpu, uint16_t address);
 void jump_if_zero(I8080 *cpu, uint16_t address);
 void jump_if_not_zero(I8080 *cpu, uint16_t address);
+void jump_if_minus(I8080 *cpu, uint16_t address);
+void jump_if_positive(I8080 *cpu, uint16_t address);
 void jump_if_parity_even(I8080 *cpu, uint16_t address);
-void jump_if_no_carry(I8080 *cpu, uint16_t address);
+void jump_if_parity_odd(I8080 *cpu, uint16_t address);
 
 bool get_sign_flag(I8080 *cpu);
 bool get_zero_flag(I8080 *cpu);

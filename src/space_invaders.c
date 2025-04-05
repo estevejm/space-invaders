@@ -166,8 +166,32 @@ void subroutine_call(SpaceInvaders *si, uint16_t address) {
   jump(&si->cpu, address);
 }
 
+void subroutine_call_if_carry(SpaceInvaders *si, uint16_t address) {
+  if (get_carry_flag(&si->cpu)) {
+    subroutine_call(si, address);
+  }
+}
+
+void subroutine_call_if_no_carry(SpaceInvaders *si, uint16_t address) {
+  if (!get_carry_flag(&si->cpu)) {
+    subroutine_call(si, address);
+  }
+}
+
 void subroutine_call_if_zero(SpaceInvaders *si, uint16_t address) {
   if (get_zero_flag(&si->cpu)) {
+    subroutine_call(si, address);
+  }
+}
+
+void subroutine_call_if_not_zero(SpaceInvaders *si, uint16_t address) {
+  if (!get_zero_flag(&si->cpu)) {
+    subroutine_call(si, address);
+  }
+}
+
+void subroutine_call_if_minus(SpaceInvaders *si, uint16_t address) {
+  if (get_sign_flag(&si->cpu)) {
     subroutine_call(si, address);
   }
 }
@@ -178,12 +202,66 @@ void subroutine_call_if_plus(SpaceInvaders *si, uint16_t address) {
   }
 }
 
+void subroutine_call_if_parity_even(SpaceInvaders *si, uint16_t address) {
+  if (get_parity_flag(&si->cpu)) {
+    subroutine_call(si, address);
+  }
+}
+
+void subroutine_call_if_parity_odd(SpaceInvaders *si, uint16_t address) {
+  if (!get_parity_flag(&si->cpu)) {
+    subroutine_call(si, address);
+  }
+}
+
 void subroutine_return(SpaceInvaders *si) {
   si->cpu.pc = stack_pop_word(si);
 }
 
+void subroutine_return_if_carry(SpaceInvaders *si) {
+  if (get_carry_flag(&si->cpu)) {
+    subroutine_return(si);
+  }
+}
+
+void subroutine_return_if_no_carry(SpaceInvaders *si) {
+  if (!get_carry_flag(&si->cpu)) {
+    subroutine_return(si);
+  }
+}
+
+void subroutine_return_if_zero(SpaceInvaders *si) {
+  if (get_zero_flag(&si->cpu)) {
+    subroutine_return(si);
+  }
+}
+
+void subroutine_return_if_not_zero(SpaceInvaders *si) {
+  if (!get_zero_flag(&si->cpu)) {
+    subroutine_return(si);
+  }
+}
+
+void subroutine_return_if_minus(SpaceInvaders *si) {
+  if (get_sign_flag(&si->cpu)) {
+    subroutine_return(si);
+  }
+}
+
 void subroutine_return_if_plus(SpaceInvaders *si) {
   if (!get_sign_flag(&si->cpu)) {
+    subroutine_return(si);
+  }
+}
+
+void subroutine_return_if_parity_even(SpaceInvaders *si) {
+  if (get_carry_flag(&si->cpu)) {
+    subroutine_return(si);
+  }
+}
+
+void subroutine_return_if_parity_odd(SpaceInvaders *si) {
+  if (!get_carry_flag(&si->cpu)) {
     subroutine_return(si);
   }
 }
@@ -940,7 +1018,6 @@ void cycle(SpaceInvaders *si) {
       print_instruction(si, "SUB M");
       uint8_t data = register_pair_read_byte(si, H_PAIR);
       subtract_accumulator(&si->cpu, data);
-      todo();
       break;
     }
     case 0x97: {
@@ -1119,7 +1196,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xc0: {
       print_instruction(si, "RNZ");
-      todo();
+      subroutine_return_if_not_zero(si);
       break;
     }
     case 0xc1: {
@@ -1143,7 +1220,7 @@ void cycle(SpaceInvaders *si) {
     case 0xc4: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "CNZ %04x", address);
-      todo();
+      subroutine_call_if_not_zero(si, address);
       break;
     }
     case 0xc5: {
@@ -1164,7 +1241,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xc8: {
       print_instruction(si, "RZ");
-      todo();
+      subroutine_return_if_zero(si);
       break;
     }
     case 0xc9: {
@@ -1208,7 +1285,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xd0: {
       print_instruction(si, "RNC");
-      todo();
+      subroutine_return_if_no_carry(si);
       break;
     }
     case 0xd1: {
@@ -1239,7 +1316,7 @@ void cycle(SpaceInvaders *si) {
     case 0xd4: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "CNC %04x", address);
-      todo();
+      subroutine_call_if_no_carry(si, address);
       break;
     }
     case 0xd5: {
@@ -1259,8 +1336,8 @@ void cycle(SpaceInvaders *si) {
       break;
     }
     case 0xd8: {
-      print_instruction(si, "RZ");
-      todo();
+      print_instruction(si, "RC");
+      subroutine_return_if_carry(si);
       break;
     }
     case 0xd9: {
@@ -1271,7 +1348,7 @@ void cycle(SpaceInvaders *si) {
     case 0xda: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "JC %04x", address);
-      todo();
+      jump_if_carry(&si->cpu, address);
       break;
     }
     case 0xdb: {
@@ -1283,7 +1360,7 @@ void cycle(SpaceInvaders *si) {
     case 0xdc: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "CC %04x", address);
-      todo();
+      subroutine_call_if_carry(si, address);
       break;
     }
     case 0xdd: {
@@ -1304,7 +1381,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xe0: {
       print_instruction(si, "RPO");
-      todo();
+      subroutine_return_if_parity_odd(si);
       break;
     }
     case 0xe1: {
@@ -1316,7 +1393,7 @@ void cycle(SpaceInvaders *si) {
     case 0xe2: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "JPO %04x", address);
-      todo();
+      jump_if_parity_odd(&si->cpu, address);
       break;
     }
     case 0xe3: {
@@ -1327,7 +1404,7 @@ void cycle(SpaceInvaders *si) {
     case 0xe4: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "CPO %04x", address);
-      todo();
+      subroutine_call_if_parity_odd(si, address);
       break;
     }
     case 0xe5: {
@@ -1348,7 +1425,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xe8: {
       print_instruction(si, "RPE");
-      todo();
+      subroutine_return_if_parity_even(si);
       break;
     }
     case 0xe9: {
@@ -1370,7 +1447,7 @@ void cycle(SpaceInvaders *si) {
     case 0xec: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "CPE %04x", address);
-      todo();
+      subroutine_call_if_parity_even(si, address);
       break;
     }
     case 0xed: {
@@ -1391,7 +1468,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xf0: {
       print_instruction(si, "RP");
-      todo();
+      subroutine_return_if_plus(si);
       break;
     }
     case 0xf1: {
@@ -1403,7 +1480,7 @@ void cycle(SpaceInvaders *si) {
     case 0xf2: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "JP %04x", address);
-      todo();
+      jump_if_positive(&si->cpu, address);
       break;
     }
     case 0xf3: {
@@ -1435,7 +1512,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xf8: {
       print_instruction(si, "RM");
-      todo();
+      subroutine_return_if_minus(si);
       break;
     }
     case 0xf9: {
@@ -1446,7 +1523,7 @@ void cycle(SpaceInvaders *si) {
     case 0xfa: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "JM %04x", address);
-      todo();
+      jump_if_minus(&si->cpu, address);
       break;
     }
     case 0xfb: {
@@ -1457,7 +1534,7 @@ void cycle(SpaceInvaders *si) {
     case 0xfc: {
       uint16_t address = fetch_word(si);
       print_instruction(si, "CM %04x", address);
-      todo();
+      subroutine_call_if_minus(si, address);
       break;
     }
     case 0xfd: {
