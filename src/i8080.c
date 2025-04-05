@@ -333,6 +333,14 @@ void exchange_registers(I8080 *cpu) {
   set_register_pair(cpu, H_PAIR, de);
 }
 
+void load_pc(I8080 *cpu) {
+  cpu->pc = get_register_pair(cpu, H_PAIR);
+}
+
+void load_sp(I8080 *cpu) {
+  cpu->sp = get_register_pair(cpu, H_PAIR);
+}
+
 //   6 = 0b0110
 //   9 = 0b1001 (max BCD value)
 // 9+6 = 0b1111

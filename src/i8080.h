@@ -81,6 +81,8 @@ void increment_register_pair(I8080 *cpu, enum RegisterPair r);
 void decrement_register_pair(I8080 *cpu, enum RegisterPair r);
 void double_add(I8080 *cpu, enum RegisterPair r);
 void exchange_registers(I8080 *cpu);
+void load_pc(I8080 *cpu);
+void load_sp(I8080 *cpu);
 
 void decimal_adjust_accumulator(I8080 *cpu);
 

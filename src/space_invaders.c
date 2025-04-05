@@ -1437,7 +1437,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xe9: {
       print_instruction(si, "PCHL");
-      todo();
+      load_pc(&si->cpu);
       break;
     }
     case 0xea: {
@@ -1524,7 +1524,7 @@ void cycle(SpaceInvaders *si) {
     }
     case 0xf9: {
       print_instruction(si, "SPHL");
-      todo();
+      load_sp(&si->cpu);
       break;
     }
     case 0xfa: {
