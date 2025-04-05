@@ -307,11 +307,6 @@ void restart(SpaceInvaders *si, uint8_t exp) {
   si->cpu.pc = bounded << 3;
 }
 
-void todo() {
-  printf("UNKNOWN OPCODE\n");
-  exit(1);
-}
-
 void register_add(SpaceInvaders *si, enum Register r) {
   print_instruction(si, "ADD %c", register_names[r]);
   add_register_accumulator(&si->cpu, r);
@@ -1305,16 +1300,31 @@ void cycle(SpaceInvaders *si) {
       break;
     }
     case 0xd3: {
-      uint8_t data = fetch_byte(si);
-      print_instruction(si, "OUT %02x", data);
-      uint8_t a = get_register(&si->cpu, A);
-      if (data == 3 || data == 5) {
-        printf("* A register value (%02x) sent to output device %02x (%s) - TODO\n", a, data, "SOUND");
-      } else if (data == 6) {
-        printf("* A register value (%02x) sent to output device %02x (%s)\n", a, data, "WATCHDOG");
-      } else {
-        todo();
+      uint8_t device = fetch_byte(si);
+      print_instruction(si, "OUT %02x", device);
+      uint8_t data = get_register(&si->cpu, A);
+      printf("* A register value %02x sent to output device %02x -> ", data, device);
+      switch (device) {
+        case 2:
+          printf("SHFTAMNT");
+          break;
+        case 3:
+          printf("SOUND1");
+          break;
+        case 4:
+          printf("SHFT_DATA");
+          break;
+        case 5:
+          printf("SOUND2");
+          break;
+        case 6:
+          printf("WATCHDOG");
+          break;
+        default:
+          printf("UNKNOWN INPUT");
+          exit(1);
       }
+      printf("\n");
       break;
     }
     case 0xd4: {
@@ -1356,9 +1366,26 @@ void cycle(SpaceInvaders *si) {
       break;
     }
     case 0xdb: {
-      uint8_t data = fetch_byte(si);
-      print_instruction(si, "IN %02x", data);
-      todo();
+      uint8_t device = fetch_byte(si);
+      print_instruction(si, "IN %02x", device);
+
+      uint8_t data = 0; // TODO: read from input
+      set_register(&si->cpu, A, data);
+      printf("* A register value set to %02x, received from input device %02x -> ", data, device);
+      switch (device) {
+        case 0:
+        case 1:
+        case 2:
+          printf("INP%d", device);
+          break;
+        case 3:
+          printf("SHFT_IN");
+          break;
+        default:
+          printf("UNKNOWN INPUT");
+          exit(1);
+      }
+      printf("\n");
       break;
     }
     case 0xdc: {
@@ -1565,9 +1592,9 @@ void cycle(SpaceInvaders *si) {
 
 void run(SpaceInvaders *si) {
   // TODO: specify rom to load from program arg
-//  program_rom(si);
+  program_rom(si);
 //  program_test_rom(si);
-  program_hardcoded(si);
+//  program_hardcoded(si);
   while (!is_stopped(&si->cpu)) { // TODO: keep in halt state until interrupt
 //    peek_next_bytes(si);
     cycle(si);
