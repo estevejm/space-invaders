@@ -1,7 +1,10 @@
-#include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include "memory.h"
+
+#include "space_invaders.h"
 
 void check_bounds(int address) {
     if (address < 0 || address >= MEMORY_BYTES) {

@@ -1,13 +1,12 @@
-#include <stdlib.h>
+#include "space_invaders.h"
+
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdarg.h>
+#include <stdlib.h>
 #include <unistd.h>
-#include "string.h"
+
 #include "raylib.h"
-#include "space_invaders.h"
-#include "i8080.h"
-#include "memory.h"
 
 #define ROM_H_ADDRESS 0x0000
 #define ROM_G_ADDRESS 0x0800
@@ -20,6 +19,7 @@ const int window_width = 256;
 const int window_height = 224;
 const int pixel_size = 3;
 
+typedef struct spaceInvaders SpaceInvaders;
 struct spaceInvaders {
   I8080 cpu;
   Memory memory;
@@ -1625,4 +1625,13 @@ void run(SpaceInvaders *si) {
   }
 
   CloseWindow();
+}
+
+int main(void) {
+  printf("Space Invaders!\n");
+
+  SpaceInvaders *si = new();
+  run(si);
+
+  return 0;
 }

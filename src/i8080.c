@@ -1,5 +1,8 @@
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
-#include "i8080.h"
+
+#include "space_invaders.h"
 
 #define CARRY_FLAG_POS 0
 #define PARITY_FLAG_POS 2
