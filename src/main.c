@@ -6,4 +6,6 @@ int main(void) {
 
   SpaceInvaders *si = new();
   run(si);
+
+  return 0;
 }

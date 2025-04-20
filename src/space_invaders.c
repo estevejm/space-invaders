@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include "string.h"
+#include "raylib.h"
 #include "space_invaders.h"
 #include "i8080.h"
 #include "memory.h"
@@ -14,6 +15,10 @@
 #define ROM_E_ADDRESS 0x1800
 #define RAM_ADDRESS 0x2000
 #define VRAM_ADDRESS 0x2400
+
+const int window_width = 256;
+const int window_height = 224;
+const int pixel_size = 3;
 
 struct spaceInvaders {
   I8080 cpu;
@@ -67,7 +72,7 @@ void program_hardcoded(SpaceInvaders *si) {
 
 SpaceInvaders *new() {
   SpaceInvaders *si = malloc(sizeof(SpaceInvaders));
-
+  si->cpu.sp = MEMORY_BYTES & 0xffff;
   return si;
 }
 
@@ -1307,15 +1312,19 @@ void cycle(SpaceInvaders *si) {
       switch (device) {
         case 2:
           printf("SHFTAMNT");
+          exit(1);
           break;
         case 3:
           printf("SOUND1");
+          exit(1);
           break;
         case 4:
           printf("SHFT_DATA");
+          exit(1);
           break;
         case 5:
           printf("SOUND2");
+          exit(1);
           break;
         case 6:
           printf("WATCHDOG");
@@ -1377,9 +1386,11 @@ void cycle(SpaceInvaders *si) {
         case 1:
         case 2:
           printf("INP%d", device);
+          exit(1);
           break;
         case 3:
           printf("SHFT_IN");
+          exit(1);
           break;
         default:
           printf("UNKNOWN INPUT");
@@ -1591,18 +1602,27 @@ void cycle(SpaceInvaders *si) {
 }
 
 void run(SpaceInvaders *si) {
+  InitWindow(window_width * pixel_size, window_height * pixel_size, "Space Invaders");
+  // SetTargetFPS(60); // TODO: implement clock (separate update loop from drawing one)
+
   // TODO: specify rom to load from program arg
   program_rom(si);
-//  program_test_rom(si);
-//  program_hardcoded(si);
-  while (!is_stopped(&si->cpu)) { // TODO: keep in halt state until interrupt
-//    peek_next_bytes(si);
+  //  program_test_rom(si);
+  //  program_hardcoded(si);
+
+  while (!WindowShouldClose() && !is_stopped(&si->cpu))
+  {
     cycle(si);
     print_state_8080(&si->cpu);
     printf("····················\n");
     print_stack(si);
     printf("~~~~~~~~~~~~~~~~~~~~\n");
-    // TODO: implement clock
-//    usleep(0.1 * 1000000);
+
+    BeginDrawing();
+    ClearBackground(RAYWHITE);
+    // DrawRectangle(50 * pixel_size, 50 * pixel_size, pixel_size, pixel_size, RED);
+    EndDrawing();
   }
+
+  CloseWindow();
 }
