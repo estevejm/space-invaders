@@ -14,10 +14,15 @@
 #define ROM_E_ADDRESS 0x1800
 #define RAM_ADDRESS 0x2000
 #define VRAM_ADDRESS 0x2400
+#define VRAM_SIZE 0x1C00
 
 const int window_width = 256;
 const int window_height = 224;
-const int pixel_size = 3;
+const int scale = 3;
+const int offset = 3;
+const float rotation = -90.0f;
+const Color color1 = BLACK;
+const Color color2 = GREEN;
 
 typedef struct spaceInvaders SpaceInvaders;
 struct spaceInvaders {
@@ -1312,26 +1317,21 @@ void cycle(SpaceInvaders *si) {
       switch (device) {
         case 2:
           printf("SHFTAMNT");
-          exit(1);
           break;
         case 3:
           printf("SOUND1");
-          exit(1);
           break;
         case 4:
           printf("SHFT_DATA");
-          exit(1);
           break;
         case 5:
           printf("SOUND2");
-          exit(1);
           break;
         case 6:
           printf("WATCHDOG");
           break;
         default:
           printf("UNKNOWN INPUT");
-          exit(1);
       }
       printf("\n");
       break;
@@ -1386,15 +1386,12 @@ void cycle(SpaceInvaders *si) {
         case 1:
         case 2:
           printf("INP%d", device);
-          exit(1);
           break;
         case 3:
           printf("SHFT_IN");
-          exit(1);
           break;
         default:
           printf("UNKNOWN INPUT");
-          exit(1);
       }
       printf("\n");
       break;
@@ -1601,9 +1598,31 @@ void cycle(SpaceInvaders *si) {
   }
 }
 
+void draw_screen(Memory *memory) {
+  const int line_bytes = 0x20;
+
+  ClearBackground(color1);
+
+  for (int i = 0; i < VRAM_SIZE; i++) {
+    const uint8_t data = memory_read_byte(memory, VRAM_ADDRESS + i);
+    if (data == 0) {
+      continue;
+    }
+    const int x = 8 * (i % line_bytes);
+    const int y = i / line_bytes;
+    for (int j = 0; j < 8; j++) {
+      if (data >> j & 1) {
+        DrawRectangle(x + j, y, 1, 1, color2);
+      }
+    }
+  }
+}
+
 void run(SpaceInvaders *si) {
-  InitWindow(window_width * pixel_size, window_height * pixel_size, "Space Invaders");
+  InitWindow(window_height * scale + offset * 2, window_width * scale + offset * 2, "Space Invaders");
   // SetTargetFPS(60); // TODO: implement clock (separate update loop from drawing one)
+
+  RenderTexture2D target = LoadRenderTexture(window_width, window_height);
 
   // TODO: specify rom to load from program arg
   program_rom(si);
@@ -1618,18 +1637,36 @@ void run(SpaceInvaders *si) {
     print_stack(si);
     printf("~~~~~~~~~~~~~~~~~~~~\n");
 
+    BeginTextureMode(target);
+      draw_screen(&si->memory);
+    EndTextureMode();
+
     BeginDrawing();
-    ClearBackground(RAYWHITE);
-    // DrawRectangle(50 * pixel_size, 50 * pixel_size, pixel_size, pixel_size, RED);
+      ClearBackground(color2);
+      Rectangle source = {
+        0.0f,
+        0.0f,
+        (float) target.texture.width,
+        -(float) target.texture.height
+      };
+      Rectangle dest = {
+        (float) offset,
+        (float) offset + (float) window_width * (float) scale,
+        (float) target.texture.width * (float) scale,
+        (float) target.texture.height * (float) scale
+      };
+      Vector2 origin = { 0.0f, 0.0f };
+
+      DrawTexturePro(target.texture, source, dest, origin, rotation, WHITE);
     EndDrawing();
   }
+
+  UnloadRenderTexture(target);
 
   CloseWindow();
 }
 
 int main(void) {
-  printf("Space Invaders!\n");
-
   SpaceInvaders *si = new();
   run(si);
 
